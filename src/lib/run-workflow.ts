@@ -65,11 +65,27 @@ function triggerExecutor(runId: string): NodeExecutor {
     // Imported lazily so the local path never pulls the task runtime.
     const { cropImageTask } = await import("@/trigger/crop-image");
     const { geminiTask } = await import("@/trigger/gemini");
+    const { runs } = await import("@trigger.dev/sdk");
+
+    // IMPORTANT: use `trigger` + `runs.poll` (client-side HTTP polling), NOT
+    // `triggerAndWait`. The engine runs sibling nodes concurrently, and
+    // Trigger.dev forbids parallel waitpoints ("Parallel waits are not
+    // supported … Promise.all() around our wait functions"). Polling is not a
+    // waitpoint, so concurrent children work and DAG concurrency is preserved.
+    async function awaitChild<T>(handle: { id: string }): Promise<T> {
+      const result = await runs.poll(handle.id, { pollIntervalMs: 2000 });
+      if (result.status !== "COMPLETED") {
+        throw new Error(
+          `${result.taskIdentifier} ${result.status}: ${result.error?.message ?? "no output"}`,
+        );
+      }
+      return result.output as T;
+    }
 
     if (node.type === "crop-image") {
       const { imageUrl, x, y, w, h } = cropInputsFrom(node, inputs);
       if (!imageUrl) throw new Error("Crop Image node has no input image.");
-      const handle = await cropImageTask.triggerAndWait({
+      const handle = await cropImageTask.trigger({
         runId,
         nodeId: node.id,
         imageUrl,
@@ -78,12 +94,12 @@ function triggerExecutor(runId: string): NodeExecutor {
         w,
         h,
       });
-      if (!handle.ok) throw new Error("Crop task failed.");
+      const out = await awaitChild<{ outputUrl: string }>(handle);
       return {
         nodeId: node.id,
         nodeType: "crop-image",
-        outputs: { output: handle.output.outputUrl },
-        dataPatch: { imageUrl, outputUrl: handle.output.outputUrl, runState: "completed" },
+        outputs: { output: out.outputUrl },
+        dataPatch: { imageUrl, outputUrl: out.outputUrl, runState: "completed" },
         logs: [],
         input: { imageUrl, x, y, w, h },
         triggerRunId: handle.id,
@@ -92,7 +108,7 @@ function triggerExecutor(runId: string): NodeExecutor {
     if (node.type === "gemini") {
       const g = geminiInputsFrom(node, inputs);
       if (!g.prompt?.trim()) throw new Error("Gemini node has no prompt.");
-      const handle = await geminiTask.triggerAndWait({
+      const handle = await geminiTask.trigger({
         runId,
         nodeId: node.id,
         model: g.model,
@@ -101,12 +117,12 @@ function triggerExecutor(runId: string): NodeExecutor {
         settings: g.settings,
         vision: g.vision,
       });
-      if (!handle.ok) throw new Error("Gemini task failed.");
+      const out = await awaitChild<{ text: string }>(handle);
       return {
         nodeId: node.id,
         nodeType: "gemini",
-        outputs: { response: handle.output.text },
-        dataPatch: { response: handle.output.text, runState: "completed" },
+        outputs: { response: out.text },
+        dataPatch: { response: out.text, runState: "completed" },
         logs: [],
         input: g,
         triggerRunId: handle.id,
