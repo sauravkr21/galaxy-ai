@@ -38,7 +38,7 @@ export default async function DashboardPage() {
               <Workflow className="h-4 w-4" />
             </span>
             <span className="text-[15px] font-semibold tracking-tight text-ink">
-              NextFlow
+              Magica
             </span>
           </div>
           <UserButton afterSignOutUrl="/sign-in" />
