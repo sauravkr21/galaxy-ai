@@ -16,7 +16,7 @@ export default defineConfig({
       ffmpeg(),
       // Generate the Prisma client inside the deployed image so the
       // orchestrator task can read/write the run + node-run rows.
-      prismaExtension({ schema: "prisma/schema.prisma" }),
+      prismaExtension({ mode: "legacy", schema: "prisma/schema.prisma" }),
     ],
   },
   retries: {
