@@ -1,4 +1,4 @@
-import { logger, task } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk";
 import { runGemini } from "@/lib/gemini";
 import { attributionLog } from "@/lib/branding";
 import type { GeminiSettings } from "@/types/flow";

@@ -1,8 +1,10 @@
-import { defineConfig } from "@trigger.dev/sdk/v3";
+import { defineConfig } from "@trigger.dev/sdk";
 import { ffmpeg } from "@trigger.dev/build/extensions/core";
 
 export default defineConfig({
-  project: process.env.TRIGGER_PROJECT_REF || "proj_placeholder",
+  // Project ref is not secret; hardcode so the CLI deploy/dev picks it up
+  // (the CLI does not read .env for this), with an env override if needed.
+  project: process.env.TRIGGER_PROJECT_REF || "proj_zahwasvneywhorifastz",
   runtime: "node",
   logLevel: "info",
   maxDuration: 300, // crop task waits 30s+, give headroom

@@ -1,4 +1,4 @@
-import { logger, task } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk";
 import { executeRun } from "@/lib/run-workflow";
 
 export interface ExecuteWorkflowPayload {

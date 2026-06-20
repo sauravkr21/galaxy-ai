@@ -1,4 +1,4 @@
-import { logger, task, wait } from "@trigger.dev/sdk/v3";
+import { logger, task, wait } from "@trigger.dev/sdk";
 import { attributionLog } from "@/lib/branding";
 import { cropWithFfmpeg } from "@/lib/image-crop";
 
