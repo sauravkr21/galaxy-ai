@@ -1,0 +1,101 @@
+// NextFlow data model.
+// Workflows, edges and node config live in `Workflow.graph` (JSON) so the
+// React Flow document round-trips losslessly for export/import. Execution
+// produces a `Run` plus one `NodeRun` per executed node for the history panel.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum WorkflowStatus {
+  DRAFT
+  READY
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum RunMode {
+  FULL // run every node in the DAG
+  SINGLE // run a single selected node
+  MULTI // run a set of selected nodes
+}
+
+enum NodeRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+model Workflow {
+  id        String         @id @default(cuid())
+  userId    String // Clerk user id — every query is scoped by this.
+  name      String         @default("New Workflow")
+  status    WorkflowStatus @default(DRAFT)
+  // { nodes: FlowNode[], edges: FlowEdge[], viewport?: {...} }
+  graph     Json
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  runs      Run[]
+
+  @@index([userId, updatedAt])
+}
+
+model Run {
+  id           String    @id @default(cuid())
+  workflowId   String
+  workflow     Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  userId       String
+  status       RunStatus @default(QUEUED)
+  mode         RunMode   @default(FULL)
+  // The set of node ids that were targeted for this run (for selective runs).
+  targetNodeIds String[]
+  // Snapshot of the graph at run time so history stays accurate after edits.
+  snapshot     Json
+  estCredits   Float?
+  error        String?
+  createdAt    DateTime  @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  nodeRuns     NodeRun[]
+
+  @@index([workflowId, createdAt])
+  @@index([userId])
+}
+
+model NodeRun {
+  id               String        @id @default(cuid())
+  runId            String
+  run              Run           @relation(fields: [runId], references: [id], onDelete: Cascade)
+  nodeId           String // the React Flow node id
+  nodeType         String // request-inputs | crop-image | gemini | response
+  label            String
+  status           NodeRunStatus @default(PENDING)
+  // Resolved inputs and produced output, both JSON.
+  input            Json?
+  output           Json?
+  logs             String[]
+  error            String?
+  triggerRunId     String? // Trigger.dev run id for executable nodes
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  durationMs       Int?
+
+  @@index([runId])
+}

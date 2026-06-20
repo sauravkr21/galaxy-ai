@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+@layer utilities {
+  /* React Flow renders the dot-grid background; this is the page fallback. */
+  .dot-grid {
+    background-color: #f7f7fa;
+    background-image: radial-gradient(circle, #d7d7e0 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* ---- React Flow overrides so the canvas matches the reference ---- */
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+.react-flow__handle {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(16, 16, 40, 0.18);
+}
+.react-flow__controls {
+  box-shadow: 0 6px 20px rgba(16, 16, 40, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #ececf1;
+}
+.react-flow__controls-button {
+  background: #fff;
+  border-bottom: 1px solid #f1f1f5;
+  width: 34px;
+  height: 34px;
+}
+.react-flow__controls-button svg {
+  fill: #6b6b78;
+}
+.react-flow__minimap {
+  border-radius: 12px;
+  border: 1px solid #ececf1;
+  box-shadow: 0 6px 20px rgba(16, 16, 40, 0.12);
+}

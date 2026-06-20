@@ -1,0 +1,108 @@
+import { z } from "zod";
+import { GEMINI_MODELS } from "@/types/flow";
+
+// ── Node data schemas ──
+
+const runState = z.enum(["idle", "queued", "running", "completed", "failed"]);
+
+const requestInputsData = z.object({
+  label: z.string(),
+  textField: z.string(),
+  imageUrl: z.string().nullable(),
+  imageName: z.string().nullable(),
+  runState,
+});
+
+const cropImageData = z.object({
+  label: z.string(),
+  // May be an https URL (Transloadit) or a data: URL produced by an upstream crop.
+  imageUrl: z.string().nullable(),
+  x: z.number().min(0).max(100),
+  y: z.number().min(0).max(100),
+  w: z.number().min(0).max(100),
+  h: z.number().min(0).max(100),
+  outputUrl: z.string().nullable(),
+  runState,
+});
+
+const geminiData = z.object({
+  label: z.string(),
+  model: z.enum(GEMINI_MODELS),
+  prompt: z.string(),
+  systemPrompt: z.string(),
+  vision: z.object({
+    image: z.string().nullable(),
+    video: z.string().nullable(),
+    audio: z.string().nullable(),
+    file: z.string().nullable(),
+  }),
+  settings: z.object({
+    temperature: z.number().min(0).max(2),
+    maxOutputTokens: z.number().int().positive().max(32768),
+    topP: z.number().min(0).max(1),
+  }),
+  response: z.string().nullable(),
+  runState,
+});
+
+const responseData = z.object({
+  label: z.string(),
+  resultKey: z.string(),
+  result: z.string().nullable(),
+  runState,
+});
+
+export const flowNodeSchema = z.object({
+  id: z.string(),
+  type: z.enum(["request-inputs", "crop-image", "gemini", "response"]),
+  position: z.object({ x: z.number(), y: z.number() }),
+  // Discriminating per-type would be stricter, but the union keeps import lenient.
+  data: z.union([requestInputsData, cropImageData, geminiData, responseData]),
+});
+
+export const flowEdgeSchema = z.object({
+  id: z.string(),
+  source: z.string(),
+  sourceHandle: z.string(),
+  target: z.string(),
+  targetHandle: z.string(),
+});
+
+export const workflowGraphSchema = z.object({
+  nodes: z.array(flowNodeSchema),
+  edges: z.array(flowEdgeSchema),
+  viewport: z
+    .object({ x: z.number(), y: z.number(), zoom: z.number() })
+    .optional(),
+});
+
+// ── API payloads ──
+
+export const createWorkflowSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  graph: workflowGraphSchema.optional(),
+});
+
+export const updateWorkflowSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  status: z
+    .enum(["DRAFT", "READY", "RUNNING", "COMPLETED", "FAILED"])
+    .optional(),
+  graph: workflowGraphSchema.optional(),
+});
+
+export const startRunSchema = z.object({
+  mode: z.enum(["full", "single", "multi"]).default("full"),
+  targetNodeIds: z.array(z.string()).default([]),
+  // The client sends the current graph so the run snapshots exactly what's on canvas.
+  graph: workflowGraphSchema,
+});
+
+export const importWorkflowSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  graph: workflowGraphSchema,
+});
+
+export type CreateWorkflowInput = z.infer<typeof createWorkflowSchema>;
+export type UpdateWorkflowInput = z.infer<typeof updateWorkflowSchema>;
+export type StartRunInput = z.infer<typeof startRunSchema>;
