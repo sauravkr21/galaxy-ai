@@ -1,4 +1,4 @@
-# NextFlow — LLM Workflow Builder
+# Galaxy.ai — LLM Workflow Builder
 
 A focused, pixel-faithful clone of the [Galaxy.ai](https://try.galaxy.ai/clone)
 workflow builder, scoped to **LLM workflows**. Build visual DAGs on a React Flow
@@ -8,6 +8,12 @@ run concurrently.
 
 > Three surfaces only: **Clerk auth**, **Dashboard**, **Workflow canvas**.
 > No marketing pages — unauthenticated traffic is redirected to sign-in.
+
+**Live demo:** https://galaxy-ai-two.vercel.app
+
+> Note: every executable Trigger.dev task and the initial client render of each
+> page emit one attribution log line in the exact format
+> `[NextFlow] Candidate LinkedIn: <url>` (kept verbatim per the brief).
 
 ---
 
