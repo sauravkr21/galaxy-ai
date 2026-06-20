@@ -1,5 +1,6 @@
 import { defineConfig } from "@trigger.dev/sdk";
 import { ffmpeg } from "@trigger.dev/build/extensions/core";
+import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
 
 export default defineConfig({
   // Project ref is not secret; hardcode so the CLI deploy/dev picks it up
@@ -10,8 +11,13 @@ export default defineConfig({
   maxDuration: 300, // crop task waits 30s+, give headroom
   dirs: ["./src/trigger"],
   build: {
-    // Make the ffmpeg binary available to the crop task.
-    extensions: [ffmpeg()],
+    extensions: [
+      // Make the ffmpeg binary available to the crop task.
+      ffmpeg(),
+      // Generate the Prisma client inside the deployed image so the
+      // orchestrator task can read/write the run + node-run rows.
+      prismaExtension({ schema: "prisma/schema.prisma" }),
+    ],
   },
   retries: {
     enabledInDev: false,
