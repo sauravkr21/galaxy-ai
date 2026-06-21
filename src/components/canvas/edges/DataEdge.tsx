@@ -10,12 +10,12 @@ import { getPort, requestFieldPortType } from "@/lib/nodes";
 import type { NodeKind, PortType, RequestInputsData } from "@/types/flow";
 
 const STROKE: Record<PortType, string> = {
-  text: "#f5a623",
-  image: "#7c5cff",
-  video: "#7c5cff",
-  audio: "#22c55e",
-  file: "#0ea5e9",
-  any: "#9a9aa7",
+  text: "#f59e0b",
+  image: "#3b82f6",
+  video: "#22c55e",
+  audio: "#06b6d4",
+  file: "#a855f7",
+  any: "#ec4899",
 };
 
 /** Bezier edge whose colour is derived from the source port type, matching the

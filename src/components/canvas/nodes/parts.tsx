@@ -5,13 +5,15 @@ import { cn } from "@/lib/utils";
 import type { NodeRunState, PortType } from "@/types/flow";
 import { Loader2, Check, AlertCircle } from "lucide-react";
 
+// Handle colors matched to the reference: text=orange, image=blue, video=green,
+// audio=cyan, file=purple, any (e.g. crop X/Y/W/H)=pink.
 const PORT_COLORS: Record<PortType, string> = {
-  text: "#f5a623",
-  image: "#7c5cff",
-  video: "#7c5cff",
-  audio: "#22c55e",
-  file: "#0ea5e9",
-  any: "#9a9aa7",
+  text: "#f59e0b",
+  image: "#3b82f6",
+  video: "#22c55e",
+  audio: "#06b6d4",
+  file: "#a855f7",
+  any: "#ec4899",
 };
 
 /** A typed connection handle with a label sitting beside it. */

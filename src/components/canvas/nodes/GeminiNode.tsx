@@ -22,10 +22,10 @@ function ConnectedBox({ children }: { children: React.ReactNode }) {
 }
 
 const VISION_PORTS = [
-  { id: "image", label: "Image (Vision)", type: "image" as const, accept: "image/*" },
-  { id: "video", label: "Video", type: "video" as const, accept: "video/*" },
-  { id: "audio", label: "Audio", type: "audio" as const, accept: "audio/*" },
-  { id: "file", label: "File", type: "file" as const, accept: "*/*" },
+  { id: "image", label: "Image (Vision)", uploadLabel: "Upload Image", type: "image" as const, accept: "image/*", hint: "Supported: jpg, png, webp, gif" },
+  { id: "video", label: "Video", uploadLabel: "Upload Video", type: "video" as const, accept: "video/*", hint: undefined },
+  { id: "audio", label: "Audio", uploadLabel: "Upload Audio", type: "audio" as const, accept: "audio/*", hint: undefined },
+  { id: "file", label: "File", uploadLabel: "Upload File", type: "file" as const, accept: "*/*", hint: undefined },
 ];
 
 export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) {
@@ -112,13 +112,16 @@ export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) 
                   <MediaUpload
                     value={manual}
                     accept={p.accept}
-                    label={`Upload ${p.id}`}
+                    label={p.uploadLabel}
                     onChange={(url) =>
                       update(id, {
                         vision: { ...data.vision, [p.id]: url },
                       })
                     }
                   />
+                )}
+                {!isConnected && p.hint && (
+                  <p className="mt-1 text-[10px] text-ink-faint">{p.hint}</p>
                 )}
               </div>
             </div>
