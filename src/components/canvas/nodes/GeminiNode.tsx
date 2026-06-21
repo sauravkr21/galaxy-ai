@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { type NodeProps, type Node } from "@xyflow/react";
 import { Sparkles, ChevronRight, ChevronDown } from "lucide-react";
-import { GEMINI_MODELS, type GeminiData } from "@/types/flow";
+import { type GeminiData } from "@/types/flow";
 import {
   connectedTargetHandles,
   useWorkflowStore,
@@ -41,7 +41,7 @@ export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) 
   return (
     <NodeShell
       nodeId={id}
-      title={data.label}
+      title="Gemini 3.1 Pro"
       icon={<Sparkles className="h-3.5 w-3.5" />}
       accent="#7c5cff"
       runState={data.runState}
@@ -49,19 +49,6 @@ export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) 
       width={320}
       showRun
       cost="~0.001 M"
-      headerExtra={
-        <select
-          value={data.model}
-          onChange={(e) => update(id, { model: e.target.value })}
-          className="nodrag mr-1 rounded-md border border-hairline bg-white px-1.5 py-0.5 text-[10px] font-medium text-ink-muted outline-none focus:border-violet-400"
-        >
-          {GEMINI_MODELS.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-      }
     >
       {/* Prompt (required) */}
       <div>
