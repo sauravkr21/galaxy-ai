@@ -46,24 +46,39 @@ export function Sidebar() {
         collapsed ? "w-[60px]" : "w-[240px]",
       )}
     >
-      <div className={cn("flex items-center pb-3 pt-4", collapsed ? "flex-col gap-2 px-2" : "justify-between px-4")}>
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500 text-white">
-            <Workflow className="h-4 w-4" />
-          </span>
-          {!collapsed && (
-            <span className="text-[17px] font-semibold tracking-tight text-ink">
-              Galaxy.ai
+      <div className={cn("flex items-center pb-3 pt-4", collapsed ? "justify-center px-2" : "justify-between px-4")}>
+        {collapsed ? (
+          // Collapsed: the logo IS the expand control — shows the logo, swaps to
+          // a panel-open icon on hover, expands the sidebar on click.
+          <button
+            onClick={() => setCollapsed(false)}
+            title="Expand sidebar"
+            className="group relative flex h-7 w-7 items-center justify-center"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500 text-white transition-opacity group-hover:opacity-0">
+              <Workflow className="h-4 w-4" />
             </span>
-          )}
-        </Link>
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-ink-faint hover:bg-ink/5"
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-        </button>
+            <PanelLeftOpen className="absolute h-4 w-4 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100" />
+          </button>
+        ) : (
+          <>
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500 text-white">
+                <Workflow className="h-4 w-4" />
+              </span>
+              <span className="text-[17px] font-semibold tracking-tight text-ink">
+                Galaxy.ai
+              </span>
+            </Link>
+            <button
+              onClick={() => setCollapsed(true)}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-ink-faint hover:bg-ink/5"
+              title="Collapse sidebar"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
+          </>
+        )}
       </div>
 
       <div className="px-2">
