@@ -18,12 +18,12 @@ import {
   Download,
   ImagePlus,
   Image as ImageIcon,
-  ChevronLeft,
 } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { buildSampleGraph, SAMPLE_WORKFLOW_NAME } from "@/lib/sample-workflow";
 import { importWorkflowJson, exportWorkflowJson } from "@/lib/workflow-io";
 import { uploadToTransloadit } from "@/lib/upload-client";
+import { cn } from "@/lib/utils";
 import type { WorkflowSummary } from "@/types/flow";
 import { useRef } from "react";
 
@@ -294,12 +294,12 @@ function WorkflowCard({
 }) {
   const [menu, setMenu] = useState(false);
   const [thumbOpen, setThumbOpen] = useState(false);
-  const [thumbView, setThumbView] = useState<"menu" | "library">("menu");
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function openThumb() {
-    setThumbView("menu");
+    setLibraryOpen(false);
     setThumbOpen((o) => !o);
   }
   const MENU = [
@@ -353,36 +353,28 @@ function WorkflowCard({
                 onClick={(e) => e.stopPropagation()}
                 className="absolute left-2 top-11 z-20 w-64 animate-fade-in rounded-xl border border-hairline bg-white p-3 text-left shadow-pop"
               >
-                {thumbView === "menu" ? (
-                  <>
-                    <p className="mb-2.5 text-[12px] leading-snug text-ink-muted">
-                      Add a file from your device or select one from your library
-                    </p>
-                    <button
-                      onClick={() => setThumbView("library")}
-                      className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border border-hairline bg-white py-2 text-[13px] font-medium text-ink hover:bg-ink/[0.03]"
-                    >
-                      <ImageIcon className="h-4 w-4" /> Select Asset
-                    </button>
-                    <button
-                      onClick={() => fileRef.current?.click()}
-                      disabled={uploading}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-violet-500 py-2 text-[13px] font-semibold text-white hover:bg-violet-600 disabled:opacity-60"
-                    >
-                      {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Upload
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="mb-2 flex items-center gap-1.5">
-                      <button
-                        onClick={() => setThumbView("menu")}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-ink-muted hover:bg-ink/5"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </button>
-                      <span className="text-[12px] font-medium text-ink">Select an asset</span>
-                    </div>
+                <p className="mb-2.5 text-[12px] leading-snug text-ink-muted">
+                  Add a file from your device or select one from your library
+                </p>
+                <button
+                  onClick={() => setLibraryOpen((o) => !o)}
+                  className={cn(
+                    "mb-2 flex w-full items-center justify-center gap-2 rounded-lg border py-2 text-[13px] font-medium text-ink hover:bg-ink/[0.03]",
+                    libraryOpen ? "border-violet-300 bg-violet-50/40" : "border-hairline bg-white",
+                  )}
+                >
+                  <ImageIcon className="h-4 w-4" /> Select Asset
+                </button>
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-violet-500 py-2 text-[13px] font-semibold text-white hover:bg-violet-600 disabled:opacity-60"
+                >
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Upload
+                </button>
+                {libraryOpen && (
+                  <div className="mt-2.5 border-t border-hairline pt-2.5">
+                    <p className="mb-1.5 text-[11px] font-medium text-ink-muted">Your library</p>
                     <div className="grid grid-cols-3 gap-1.5">
                       {ASSET_LIBRARY.map((url) => (
                         <button
@@ -395,7 +387,7 @@ function WorkflowCard({
                         </button>
                       ))}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </>
