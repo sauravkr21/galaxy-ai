@@ -14,14 +14,12 @@ import {
   Boxes,
   BookOpen,
   Sparkles,
-  Loader2,
   ChevronUp,
   LogOut,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
-import { api } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
 // Visual nav mirrors the reference. Only "Flow" routes (the in-scope dashboard);
@@ -42,7 +40,6 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user } = useUser();
   const { signOut } = useClerk();
-  const [creating, setCreating] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -59,16 +56,6 @@ export function Sidebar() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
-
-  async function createBlank() {
-    setCreating(true);
-    try {
-      const { id } = await api.createWorkflow({ name: "New Workflow" });
-      router.push(`/workflow/${id}`);
-    } finally {
-      setCreating(false);
-    }
-  }
 
   const isFlowActive = (href?: string) =>
     href === "/dashboard" &&
@@ -150,22 +137,6 @@ export function Sidebar() {
           <p className="px-2.5 pt-6 text-center text-[12px] text-ink-faint">No tasks yet</p>
         )}
       </nav>
-
-      {/* New workflow quick action */}
-      <div className="px-2 pb-1">
-        <button
-          onClick={createBlank}
-          disabled={creating}
-          title="New Workflow"
-          className={cn(
-            "flex w-full items-center rounded-lg bg-violet-500 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-violet-600",
-            collapsed ? "justify-center px-0" : "justify-center gap-2 px-2.5",
-          )}
-        >
-          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          {!collapsed && "New Workflow"}
-        </button>
-      </div>
 
       {/* Footer */}
       <div className="px-2 pb-2">
