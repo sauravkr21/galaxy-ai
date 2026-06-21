@@ -1,39 +1,23 @@
 "use client";
 
 import { type NodeProps, type Node } from "@xyflow/react";
-import { Crop } from "lucide-react";
+import { Crop, RotateCcw } from "lucide-react";
 import type { CropImageData } from "@/types/flow";
 import {
   connectedTargetHandles,
   useWorkflowStore,
 } from "@/store/workflow-store";
 import { NodeShell } from "./NodeShell";
-import { FieldLabel, Port } from "./parts";
+import { Port } from "./parts";
 import { MediaUpload } from "../MediaUpload";
+import { cn } from "@/lib/utils";
 
-function NumberField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (n: number) => void;
-}) {
-  return (
-    <div className="flex-1">
-      <FieldLabel>{label} (%)</FieldLabel>
-      <input
-        type="number"
-        min={0}
-        max={100}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="nodrag h-8 w-full rounded-md border border-hairline px-2 text-[12px] outline-none focus:border-violet-400"
-      />
-    </div>
-  );
-}
+const PARAMS: { handle: string; label: string; key: "x" | "y" | "w" | "h"; def: number }[] = [
+  { handle: "x", label: "X Position (%)", key: "x", def: 0 },
+  { handle: "y", label: "Y Position (%)", key: "y", def: 0 },
+  { handle: "width", label: "Width (%)", key: "w", def: 100 },
+  { handle: "height", label: "Height (%)", key: "h", def: 100 },
+];
 
 export function CropImageNode({
   id,
@@ -49,24 +33,18 @@ export function CropImageNode({
     <NodeShell
       nodeId={id}
       title={data.label}
+      subtitle="Crops an image to a rectangle. Runs as a Trigger.dev task with a 30s+ delay."
       icon={<Crop className="h-3.5 w-3.5" />}
       accent="#0ea5e9"
       runState={data.runState}
       selected={selected}
-      width={300}
+      width={320}
       showRun
+      cost="~0.005 M"
     >
-      {/* input image */}
+      {/* Input image */}
       <div>
-        <div className="flex items-center justify-between">
-          <Port
-            id="input_image"
-            label="Input image"
-            type="image"
-            side="left"
-            connected={inputConnected}
-          />
-        </div>
+        <Port id="input_image" label="Input Image" type="image" side="left" connected={inputConnected} />
         <div className="mt-1">
           {inputConnected ? (
             <div className="flex h-9 items-center rounded-lg border border-dashed border-violet-200 bg-violet-50 px-2 text-[11px] text-violet-600">
@@ -76,33 +54,67 @@ export function CropImageNode({
             <MediaUpload
               value={data.imageUrl}
               onChange={(url) => update(id, { imageUrl: url })}
-              label="Change image"
+              label="Upload Image"
             />
           )}
         </div>
       </div>
 
-      {/* crop rectangle */}
-      <div className="flex gap-2">
-        <NumberField label="x" value={data.x} onChange={(n) => update(id, { x: n })} />
-        <NumberField label="y" value={data.y} onChange={(n) => update(id, { y: n })} />
-      </div>
-      <div className="flex gap-2">
-        <NumberField label="w" value={data.w} onChange={(n) => update(id, { w: n })} />
-        <NumberField label="h" value={data.h} onChange={(n) => update(id, { h: n })} />
-      </div>
+      {/* Crop parameters with sliders */}
+      {PARAMS.map((p) => {
+        const isConnected = connected.has(p.handle);
+        const value = data[p.key];
+        return (
+          <div key={p.handle}>
+            <div className="mb-1">
+              <Port id={p.handle} label={p.label} type="any" side="left" connected={isConnected} />
+            </div>
+            {isConnected ? (
+              <div className="flex h-8 items-center rounded-lg border border-dashed border-violet-200 bg-violet-50 px-2 text-[11px] text-violet-600">
+                Provided by connection
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={value}
+                  onChange={(e) => update(id, { [p.key]: Number(e.target.value) })}
+                  className="nodrag h-1 flex-1 accent-violet-500"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={value}
+                  onChange={(e) => update(id, { [p.key]: Number(e.target.value) })}
+                  className="nodrag h-7 w-14 rounded-md border border-hairline px-1.5 text-[12px] outline-none focus:border-violet-400"
+                />
+                <button
+                  onClick={() => update(id, { [p.key]: p.def })}
+                  className="nodrag flex h-7 w-7 items-center justify-center rounded-md border border-hairline text-ink-faint hover:text-violet-600"
+                  title="Reset"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
 
-      {/* output */}
+      {/* Output */}
       <div>
         <div className="flex items-center justify-end">
-          <Port id="output" label="Output image" type="image" side="right" />
+          <Port id="output" label="Output Image" type="image" side="right" />
         </div>
         <div className="mt-1 overflow-hidden rounded-lg border border-hairline bg-ink/5">
           {data.outputUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={data.outputUrl} alt="cropped" className="h-24 w-full object-contain" />
           ) : (
-            <div className="flex h-12 items-center justify-center text-[11px] text-ink-faint">
+            <div className={cn("flex h-16 items-center justify-center text-[11px] text-ink-faint")}>
               No output yet
             </div>
           )}

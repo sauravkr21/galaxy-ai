@@ -48,6 +48,7 @@ export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) 
       selected={selected}
       width={320}
       showRun
+      cost="~0.001 M"
       headerExtra={
         <select
           value={data.model}

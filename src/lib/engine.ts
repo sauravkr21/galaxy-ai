@@ -226,7 +226,19 @@ export function geminiInputsFrom(node: FlowNode, inputs: ResolvedInputs) {
 export function cropInputsFrom(node: FlowNode, inputs: ResolvedInputs) {
   const d = node.data as CropImageData;
   const imageUrl = inputs.media["input_image"]?.[0] ?? d.imageUrl;
-  return { imageUrl, x: d.x, y: d.y, w: d.w, h: d.h };
+  // X/Y/Width/Height can be wired in (any-typed handle, parsed as a number).
+  const num = (handle: string, fallback: number) => {
+    const v = inputs.text[handle];
+    const n = v != null ? Number(v) : NaN;
+    return Number.isFinite(n) ? n : fallback;
+  };
+  return {
+    imageUrl,
+    x: num("x", d.x),
+    y: num("y", d.y),
+    w: num("width", d.w),
+    h: num("height", d.h),
+  };
 }
 
 export function isResponseLabel(node: FlowNode): string {

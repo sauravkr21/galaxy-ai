@@ -67,6 +67,9 @@ interface WorkflowState {
   updateNodeData: (id: string, patch: Partial<NodeData>) => void;
   deleteNode: (id: string) => void;
   deleteSelected: () => void;
+  duplicateNode: (id: string, withEdges: boolean) => void;
+  toggleLock: (id: string) => void;
+  clearNodeOutput: (id: string) => void;
   setSelected: (ids: string[]) => void;
 
   pushHistory: () => void;
@@ -252,6 +255,62 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       dirty: true,
     }));
   },
+
+  duplicateNode: (id, withEdges) => {
+    const node = get().nodes.find((n) => n.id === id);
+    if (!node || PROTECTED_KINDS.includes(node.type as NodeKind)) return;
+    get().pushHistory();
+    const newId = `${node.type}-${nanoid(6)}`;
+    const clone: AppNode = {
+      ...node,
+      id: newId,
+      position: { x: node.position.x + 48, y: node.position.y + 48 },
+      data: structuredClone(node.data),
+      selected: false,
+    };
+    const extraEdges: AppEdge[] = withEdges
+      ? get()
+          .edges.filter((e) => e.source === id || e.target === id)
+          .map((e) => ({
+            ...e,
+            id: `e-${nanoid(8)}`,
+            source: e.source === id ? newId : e.source,
+            target: e.target === id ? newId : e.target,
+          }))
+      : [];
+    set((s) => ({
+      nodes: [...s.nodes, clone],
+      edges: normalizeEdges([...s.edges, ...extraEdges]),
+      dirty: true,
+    }));
+  },
+
+  toggleLock: (id) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === id ? { ...n, draggable: n.draggable === false ? true : false } : n,
+      ),
+      dirty: true,
+    })),
+
+  clearNodeOutput: (id) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === id
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                runState: "idle",
+                ...(n.type === "gemini" ? { response: null } : {}),
+                ...(n.type === "crop-image" ? { outputUrl: null } : {}),
+                ...(n.type === "response" ? { result: null } : {}),
+              } as NodeData,
+            }
+          : n,
+      ),
+      dirty: true,
+    })),
 
   setSelected: (ids) => set({ selectedNodeIds: ids }),
 

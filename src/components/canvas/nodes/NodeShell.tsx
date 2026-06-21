@@ -2,7 +2,20 @@
 
 import { cn } from "@/lib/utils";
 import type { NodeRunState } from "@/types/flow";
-import { MoreHorizontal, Trash2, Play, Loader2, Check, AlertCircle } from "lucide-react";
+import {
+  MoreHorizontal,
+  Trash2,
+  Play,
+  Loader2,
+  Check,
+  AlertCircle,
+  Info,
+  RotateCcw,
+  Copy,
+  CopyPlus,
+  Lock,
+  Unlock,
+} from "lucide-react";
 import { useState } from "react";
 import { useWorkflowStore } from "@/store/workflow-store";
 
@@ -19,6 +32,7 @@ export function NodeShell({
   width = 300,
   showRun = false,
   deletable = true,
+  cost,
 }: {
   nodeId: string;
   title: string;
@@ -32,9 +46,16 @@ export function NodeShell({
   width?: number;
   showRun?: boolean;
   deletable?: boolean;
+  cost?: string;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const deleteNode = useWorkflowStore((s) => s.deleteNode);
+  const duplicateNode = useWorkflowStore((s) => s.duplicateNode);
+  const toggleLock = useWorkflowStore((s) => s.toggleLock);
+  const clearNodeOutput = useWorkflowStore((s) => s.clearNodeOutput);
+  const locked = useWorkflowStore(
+    (s) => s.nodes.find((n) => n.id === nodeId)?.draggable === false,
+  );
 
   return (
     <div
@@ -66,13 +87,34 @@ export function NodeShell({
             </div>
           )}
         </div>
+        {showRun && (
+          <>
+            <div className="group/info relative flex">
+              <button className="nodrag flex h-6 w-6 items-center justify-center rounded-md text-ink-faint hover:bg-ink/5" aria-label="Info">
+                <Info className="h-3.5 w-3.5" />
+              </button>
+              {subtitle && (
+                <span className="pointer-events-none absolute right-0 top-7 z-30 w-48 rounded-md border border-hairline bg-white px-2 py-1 text-[10px] text-ink-muted opacity-0 shadow-pop transition-opacity group-hover/info:opacity-100">
+                  {subtitle}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => clearNodeOutput(nodeId)}
+              className="nodrag flex h-6 w-6 items-center justify-center rounded-md text-ink-faint hover:bg-ink/5"
+              aria-label="Reset output"
+              title="Reset output"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </button>
+          </>
+        )}
         {headerExtra}
         {showRun ? (
           <RunControl nodeId={nodeId} runState={runState} />
         ) : (
           <StatusOnly runState={runState} />
         )}
-        {deletable && (
         <div className="relative">
           <button
             onClick={() => setMenuOpen((o) => !o)}
@@ -84,26 +126,55 @@ export function NodeShell({
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-7 z-20 w-36 animate-fade-in rounded-lg border border-hairline bg-white p-1 shadow-pop">
-                <button
-                  onClick={() => {
-                    deleteNode(nodeId);
-                    setMenuOpen(false);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Delete node
-                </button>
+              <div className="absolute right-0 top-7 z-20 w-44 animate-fade-in rounded-lg border border-hairline bg-white p-1 shadow-pop">
+                {deletable && (
+                  <>
+                    <MenuItem icon={<Copy className="h-3.5 w-3.5" />} label="Duplicate" onClick={() => { duplicateNode(nodeId, false); setMenuOpen(false); }} />
+                    <MenuItem icon={<CopyPlus className="h-3.5 w-3.5" />} label="Duplicate with Edges" onClick={() => { duplicateNode(nodeId, true); setMenuOpen(false); }} />
+                  </>
+                )}
+                <MenuItem
+                  icon={locked ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                  label={locked ? "Unlock" : "Lock"}
+                  onClick={() => { toggleLock(nodeId); setMenuOpen(false); }}
+                />
+                {deletable && (
+                  <>
+                    <div className="my-1 h-px bg-hairline" />
+                    <button
+                      onClick={() => { deleteNode(nodeId); setMenuOpen(false); }}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                    </button>
+                  </>
+                )}
               </div>
             </>
           )}
         </div>
-        )}
       </div>
 
       {/* Body */}
       <div className="flex flex-col gap-3 px-3 py-3">{children}</div>
+
+      {cost && (
+        <div className="flex items-center justify-end gap-1 border-t border-hairline px-3 py-1.5 text-[10px] text-ink-faint">
+          <Play className="h-2.5 w-2.5" /> {cost}
+        </div>
+      )}
     </div>
+  );
+}
+
+function MenuItem({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-ink hover:bg-ink/5"
+    >
+      {icon} {label}
+    </button>
   );
 }
 

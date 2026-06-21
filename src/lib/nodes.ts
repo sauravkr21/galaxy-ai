@@ -38,7 +38,13 @@ export const NODE_SPECS: Record<NodeKind, NodeSpec> = {
     title: "Crop Image",
     executable: true,
     description: "Crops an image to a rectangle. Runs as a Trigger.dev task.",
-    inputs: [{ id: "input_image", label: "Input image", type: "image" }],
+    inputs: [
+      { id: "input_image", label: "Input image", type: "image" },
+      { id: "x", label: "X Position (%)", type: "any" },
+      { id: "y", label: "Y Position (%)", type: "any" },
+      { id: "width", label: "Width (%)", type: "any" },
+      { id: "height", label: "Height (%)", type: "any" },
+    ],
     outputs: [{ id: "output", label: "Output image", type: "image" }],
   },
   gemini: {
@@ -162,7 +168,10 @@ export function targetFieldFor(kind: NodeKind, handleId: string): string | null 
     if (handleId === "system_prompt") return "systemPrompt";
     if (["image", "video", "audio", "file"].includes(handleId)) return `vision.${handleId}`;
   }
-  if (kind === "crop-image" && handleId === "input_image") return "imageUrl";
+  if (kind === "crop-image") {
+    if (handleId === "input_image") return "imageUrl";
+    if (["x", "y", "width", "height"].includes(handleId)) return handleId;
+  }
   if (kind === "response" && handleId === "result") return "result";
   return null;
 }
