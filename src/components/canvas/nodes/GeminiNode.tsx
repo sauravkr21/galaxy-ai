@@ -47,6 +47,7 @@ export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) 
       runState={data.runState}
       selected={selected}
       width={320}
+      showRun
       headerExtra={
         <select
           value={data.model}

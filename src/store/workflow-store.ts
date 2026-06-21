@@ -45,6 +45,8 @@ interface WorkflowState {
   currentRunId: string | null;
   /** Bumped whenever a run finishes so the history panel refetches. */
   historyVersion: number;
+  /** Registered by the editor so nodes can trigger their own (single) run. */
+  runFn: ((mode: "full" | "single" | "multi", nodeIds: string[]) => void) | null;
 
   // ── actions ──
   init: (workflowId: string, name: string, graph: WorkflowGraph) => void;
@@ -70,6 +72,9 @@ interface WorkflowState {
 
   setRunning: (running: boolean, runId?: string | null) => void;
   bumpHistory: () => void;
+  setRunFn: (
+    fn: ((mode: "full" | "single" | "multi", nodeIds: string[]) => void) | null,
+  ) => void;
   markClean: () => void;
   toGraph: () => WorkflowGraph;
   loadGraph: (graph: WorkflowGraph) => void;
@@ -99,6 +104,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   isRunning: false,
   currentRunId: null,
   historyVersion: 0,
+  runFn: null,
 
   init: (workflowId, name, graph) =>
     set({
@@ -279,6 +285,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({ isRunning: running, currentRunId: runId ?? null }),
 
   bumpHistory: () => set((s) => ({ historyVersion: s.historyVersion + 1 })),
+
+  setRunFn: (fn) => set({ runFn: fn }),
 
   markClean: () => set({ dirty: false }),
 

@@ -49,6 +49,7 @@ const responseData = z.object({
   label: z.string(),
   resultKey: z.string(),
   result: z.string().nullable(),
+  keys: z.record(z.string()).optional(),
   runState,
 });
 

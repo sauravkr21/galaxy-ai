@@ -5,7 +5,6 @@ import { formatDistanceToNow } from "date-fns";
 import {
   ChevronDown,
   ChevronRight,
-  X,
   Clock,
   CheckCircle2,
   XCircle,
@@ -60,6 +59,7 @@ export function HistoryPanel({
   const isRunning = useWorkflowStore((s) => s.isRunning);
   const [runs, setRuns] = useState<RunDto[]>([]);
   const [openRun, setOpenRun] = useState<string | null>(null);
+  const [tab, setTab] = useState<"ai" | "api">("ai");
 
   const load = useCallback(async () => {
     try {
@@ -84,30 +84,53 @@ export function HistoryPanel({
 
   return (
     <aside className="flex h-full w-[360px] shrink-0 flex-col border-l border-hairline bg-white">
-      <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
-        <h2 className="text-[14px] font-semibold text-ink">Run history</h2>
+      <div className="flex items-center justify-between px-4 pb-1 pt-3">
+        <h2 className="text-[14px] font-semibold text-ink">Execution History</h2>
         <button
           onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted hover:bg-ink/5"
+          className="text-[12px] font-medium text-ink-muted hover:text-ink"
         >
-          <X className="h-4 w-4" />
+          Close
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto px-2 py-2">
-        {runs.length === 0 && (
-          <p className="px-2 py-8 text-center text-[12px] text-ink-faint">
-            No runs yet. Hit Run to execute the workflow.
-          </p>
-        )}
-        {runs.map((run) => (
-          <RunRow
-            key={run.id}
-            run={run}
-            open={openRun === run.id}
-            onToggle={() => setOpenRun(openRun === run.id ? null : run.id)}
-          />
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-hairline px-4">
+        {(["ai", "api"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={cn(
+              "-mb-px border-b-2 pb-2 pt-1 text-[12px] font-medium transition-colors",
+              tab === t
+                ? "border-violet-500 text-violet-700"
+                : "border-transparent text-ink-muted hover:text-ink",
+            )}
+          >
+            {t === "ai" ? "AI Runs" : "API Runs"}
+          </button>
         ))}
+      </div>
+
+      <div className="flex-1 overflow-auto px-2 py-2">
+        {tab === "api" ? (
+          <p className="px-2 py-10 text-center text-[12px] text-ink-faint">
+            No API runs for this flow yet.
+          </p>
+        ) : runs.length === 0 ? (
+          <p className="px-2 py-10 text-center text-[12px] text-ink-faint">
+            No runs for this flow yet. Hit Run to execute the workflow.
+          </p>
+        ) : (
+          runs.map((run) => (
+            <RunRow
+              key={run.id}
+              run={run}
+              open={openRun === run.id}
+              onToggle={() => setOpenRun(openRun === run.id ? null : run.id)}
+            />
+          ))
+        )}
       </div>
     </aside>
   );

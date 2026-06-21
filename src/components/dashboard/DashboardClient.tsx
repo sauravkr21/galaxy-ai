@@ -1,34 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import {
   Plus,
+  Upload,
   Sparkles,
-  Workflow as WorkflowIcon,
   MoreVertical,
   Pencil,
   Trash2,
   Loader2,
+  Workflow as WorkflowIcon,
+  Search,
 } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { buildSampleGraph, SAMPLE_WORKFLOW_NAME } from "@/lib/sample-workflow";
+import { importWorkflowJson } from "@/lib/workflow-io";
 import type { WorkflowSummary } from "@/types/flow";
-import { cn } from "@/lib/utils";
-
-const STATUS_STYLE: Record<string, string> = {
-  DRAFT: "bg-ink/5 text-ink-muted",
-  READY: "bg-violet-50 text-violet-600",
-  RUNNING: "bg-amber-soft text-amber-ink",
-  COMPLETED: "bg-emerald-50 text-emerald-600",
-  FAILED: "bg-red-50 text-red-600",
-};
+import { useRef } from "react";
 
 export function DashboardClient({ initial }: { initial: WorkflowSummary[] }) {
   const router = useRouter();
   const [items, setItems] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const filtered = useMemo(
+    () =>
+      items.filter((w) =>
+        w.name.toLowerCase().includes(query.trim().toLowerCase()),
+      ),
+    [items, query],
+  );
 
   async function createBlank() {
     setBusy("blank");
@@ -53,6 +58,17 @@ export function DashboardClient({ initial }: { initial: WorkflowSummary[] }) {
     }
   }
 
+  async function handleImport(file: File) {
+    setBusy("import");
+    try {
+      const { name, graph } = await importWorkflowJson(file);
+      const { id } = await api.createWorkflow({ name: name ?? "Imported workflow", graph });
+      router.push(`/workflow/${id}`);
+    } catch {
+      setBusy(null);
+    }
+  }
+
   async function rename(item: WorkflowSummary) {
     const name = window.prompt("Rename workflow", item.name);
     if (!name || name === item.name) return;
@@ -67,60 +83,154 @@ export function DashboardClient({ initial }: { initial: WorkflowSummary[] }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-10">
-      <div className="mb-8 flex items-end justify-between">
+    <div className="mx-auto w-full max-w-5xl px-8 py-8">
+      {/* Header row */}
+      <div className="mb-7 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">
-            Your workflows
-          </h1>
-          <p className="mt-1 text-[14px] text-ink-muted">
-            Build and run LLM workflows on a visual canvas.
+          <h1 className="text-[26px] font-semibold tracking-tight text-ink">Flow</h1>
+          <p className="mt-0.5 text-[13px] text-ink-muted">
+            Build workflows or run modules directly.
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleImport(f);
+              e.target.value = "";
+            }}
+          />
           <button
-            onClick={createSample}
+            onClick={() => fileRef.current?.click()}
             disabled={busy !== null}
-            className="flex h-10 items-center gap-2 rounded-xl border border-hairline bg-white px-4 text-[13px] font-semibold text-ink shadow-node hover:bg-ink/[0.03]"
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-hairline bg-white px-3 text-[13px] font-medium text-ink-muted shadow-sm hover:bg-ink/[0.03]"
           >
-            {busy === "sample" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 text-violet-500" />
-            )}
-            Use sample
+            <Upload className="h-3.5 w-3.5" /> Import
           </button>
           <button
             onClick={createBlank}
             disabled={busy !== null}
-            className="flex h-10 items-center gap-2 rounded-xl bg-violet-500 px-4 text-[13px] font-semibold text-white shadow-pop hover:bg-violet-600"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink text-white hover:bg-ink/90"
+            title="New workflow"
           >
-            {busy === "blank" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
-            )}
-            New Workflow
+            {busy === "blank" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           </button>
         </div>
       </div>
 
-      {items.length === 0 ? (
-        <EmptyState onCreate={createBlank} onSample={createSample} />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
-            <WorkflowCard
-              key={item.id}
-              item={item}
-              onOpen={() => router.push(`/workflow/${item.id}`)}
-              onRename={() => rename(item)}
-              onDelete={() => remove(item)}
-            />
-          ))}
+      {/* System Workflows (templates) */}
+      <section className="mb-8">
+        <h2 className="text-[15px] font-semibold text-ink">System Workflows</h2>
+        <p className="mb-3 text-[12px] text-ink-muted">
+          Prebuilt workflow templates — click to open and start using.
+        </p>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <TemplateCard
+            title={SAMPLE_WORKFLOW_NAME}
+            subtitle="Product marketing post"
+            loading={busy === "sample"}
+            onClick={createSample}
+          />
         </div>
-      )}
+      </section>
+
+      {/* Your Workflows */}
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-[15px] font-semibold text-ink">Your Workflows</h2>
+            <p className="text-[12px] text-ink-muted">
+              Open, rename, run and rerun history.
+            </p>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-faint" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search workflows..."
+              className="h-9 w-56 rounded-lg border border-hairline bg-white pl-8 pr-3 text-[13px] outline-none focus:border-violet-400"
+            />
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-hairline bg-white py-16 text-center">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-500">
+              <WorkflowIcon className="h-6 w-6" />
+            </div>
+            <h3 className="text-[14px] font-semibold text-ink">
+              {query ? "No matching workflows" : "No workflows yet"}
+            </h3>
+            <p className="mt-1 max-w-xs text-[12px] text-ink-muted">
+              {query
+                ? "Try a different search."
+                : "Create one from scratch, or open the sample template above."}
+            </p>
+            {!query && (
+              <button
+                onClick={createBlank}
+                className="mt-4 flex h-9 items-center gap-1.5 rounded-lg bg-violet-500 px-4 text-[13px] font-semibold text-white shadow-pop hover:bg-violet-600"
+              >
+                <Plus className="h-4 w-4" /> New Workflow
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {filtered.map((item) => (
+              <WorkflowCard
+                key={item.id}
+                item={item}
+                onOpen={() => router.push(`/workflow/${item.id}`)}
+                onRename={() => rename(item)}
+                onDelete={() => remove(item)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
+  );
+}
+
+function Thumb({ children }: { children?: React.ReactNode }) {
+  return (
+    <div className="relative flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-500 via-violet-600 to-indigo-700">
+      <WorkflowIcon className="h-8 w-8 text-white/80" />
+      {children}
+    </div>
+  );
+}
+
+function TemplateCard({
+  title,
+  subtitle,
+  loading,
+  onClick,
+}: {
+  title: string;
+  subtitle: string;
+  loading?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button onClick={onClick} className="group flex flex-col text-left">
+      <Thumb>
+        <span className="absolute left-2 top-2 flex items-center gap-1 rounded-pill bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
+          {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+          Template
+        </span>
+      </Thumb>
+      <h3 className="mt-2 truncate text-[13px] font-medium text-ink group-hover:text-violet-700">
+        {title}
+      </h3>
+      <p className="text-[11px] text-ink-faint">{subtitle}</p>
+    </button>
   );
 }
 
@@ -137,55 +247,37 @@ function WorkflowCard({
 }) {
   const [menu, setMenu] = useState(false);
   return (
-    <div className="group relative flex flex-col rounded-2xl border border-hairline bg-white p-4 shadow-node transition-shadow hover:shadow-node-hover">
-      <button onClick={onOpen} className="flex flex-1 flex-col text-left">
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-500">
-          <WorkflowIcon className="h-5 w-5" />
-        </div>
-        <h3 className="truncate text-[15px] font-semibold text-ink">
+    <div className="group relative flex flex-col">
+      <button onClick={onOpen} className="flex flex-col text-left">
+        <Thumb />
+        <h3 className="mt-2 truncate text-[13px] font-medium text-ink group-hover:text-violet-700">
           {item.name}
         </h3>
-        <p className="mt-0.5 text-[12px] text-ink-muted">
+        <p className="text-[11px] text-ink-faint">
           Edited {formatDistanceToNow(new Date(item.updatedAt), { addSuffix: true })}
+          {" · "}
+          {item.nodeCount} nodes
         </p>
       </button>
-      <div className="mt-4 flex items-center justify-between">
-        <span
-          className={cn(
-            "rounded-pill px-2 py-0.5 text-[10px] font-semibold",
-            STATUS_STYLE[item.status] ?? STATUS_STYLE.DRAFT,
-          )}
-        >
-          {item.status}
-        </span>
-        <span className="text-[11px] text-ink-faint">{item.nodeCount} nodes</span>
-      </div>
-
-      <div className="absolute right-3 top-3">
+      <div className="absolute right-1.5 top-1.5">
         <button
           onClick={() => setMenu((o) => !o)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint opacity-0 transition-opacity hover:bg-ink/5 group-hover:opacity-100"
+          className="flex h-7 w-7 items-center justify-center rounded-md bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60 group-hover:opacity-100"
         >
           <MoreVertical className="h-4 w-4" />
         </button>
         {menu && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setMenu(false)} />
-            <div className="absolute right-0 top-9 z-20 w-36 animate-fade-in rounded-lg border border-hairline bg-white p-1 shadow-pop">
+            <div className="absolute right-0 top-8 z-20 w-36 animate-fade-in rounded-lg border border-hairline bg-white p-1 shadow-pop">
               <button
-                onClick={() => {
-                  setMenu(false);
-                  onRename();
-                }}
+                onClick={() => { setMenu(false); onRename(); }}
                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-ink hover:bg-ink/5"
               >
                 <Pencil className="h-3.5 w-3.5" /> Rename
               </button>
               <button
-                onClick={() => {
-                  setMenu(false);
-                  onDelete();
-                }}
+                onClick={() => { setMenu(false); onDelete(); }}
                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-red-600 hover:bg-red-50"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Delete
@@ -193,41 +285,6 @@ function WorkflowCard({
             </div>
           </>
         )}
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({
-  onCreate,
-  onSample,
-}: {
-  onCreate: () => void;
-  onSample: () => void;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-hairline bg-white py-20 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-500">
-        <WorkflowIcon className="h-7 w-7" />
-      </div>
-      <h3 className="text-[16px] font-semibold text-ink">No workflows yet</h3>
-      <p className="mt-1 max-w-sm text-[13px] text-ink-muted">
-        Create your first workflow from scratch, or start with the pre-built
-        product-marketing sample.
-      </p>
-      <div className="mt-5 flex items-center gap-2">
-        <button
-          onClick={onSample}
-          className="flex h-10 items-center gap-2 rounded-xl border border-hairline bg-white px-4 text-[13px] font-semibold text-ink shadow-node hover:bg-ink/[0.03]"
-        >
-          <Sparkles className="h-4 w-4 text-violet-500" /> Use sample
-        </button>
-        <button
-          onClick={onCreate}
-          className="flex h-10 items-center gap-2 rounded-xl bg-violet-500 px-4 text-[13px] font-semibold text-white shadow-pop hover:bg-violet-600"
-        >
-          <Plus className="h-4 w-4" /> New Workflow
-        </button>
       </div>
     </div>
   );

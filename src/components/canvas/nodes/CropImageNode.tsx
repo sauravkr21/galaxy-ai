@@ -54,6 +54,7 @@ export function CropImageNode({
       runState={data.runState}
       selected={selected}
       width={300}
+      showRun
     >
       {/* input image */}
       <div>

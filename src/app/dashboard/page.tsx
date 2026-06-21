@@ -1,8 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
-import { UserButton } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
-import { Workflow } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { Sidebar } from "@/components/app/Sidebar";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import type { WorkflowGraph, WorkflowSummary } from "@/types/flow";
 
@@ -30,21 +29,11 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <header className="sticky top-0 z-10 border-b border-hairline bg-white/80 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-6">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500 text-white">
-              <Workflow className="h-4 w-4" />
-            </span>
-            <span className="text-[15px] font-semibold tracking-tight text-ink">
-              Galaxy.ai
-            </span>
-          </div>
-          <UserButton afterSignOutUrl="/sign-in" />
-        </div>
-      </header>
-      <DashboardClient initial={summaries} />
+    <div className="flex h-screen overflow-hidden bg-white">
+      <Sidebar />
+      <main className="flex-1 overflow-y-auto bg-canvas">
+        <DashboardClient initial={summaries} />
+      </main>
     </div>
   );
 }

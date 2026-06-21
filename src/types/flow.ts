@@ -73,6 +73,9 @@ export type ResponseData = {
   /** Identifier for the collected result, e.g. "gemini_3_1_pro". */
   resultKey: string;
   result: string | null;
+  /** Per-incoming-connection custom key overrides, keyed by source node id.
+   *  The Response node collects one row per connection (like the reference). */
+  keys?: Record<string, string>;
   runState: NodeRunState;
 };
 

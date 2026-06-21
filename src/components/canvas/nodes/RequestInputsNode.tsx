@@ -19,6 +19,7 @@ export function RequestInputsNode({
     <NodeShell
       nodeId={id}
       title={data.label}
+      subtitle="Define the input fields for your workflow. These become the request parameters when running via API."
       icon={<Inbox className="h-3.5 w-3.5" />}
       accent="#1a1a23"
       runState={data.runState}

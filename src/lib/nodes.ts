@@ -124,6 +124,7 @@ export function defaultData(kind: NodeKind): NodeData {
         label: "Response",
         resultKey: "result",
         result: null,
+        keys: {},
         runState: "idle",
       } satisfies ResponseData;
   }
