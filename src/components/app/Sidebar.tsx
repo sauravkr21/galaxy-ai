@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UserButton, useUser, useClerk } from "@clerk/nextjs";
 import { Plus, Workflow, Loader2, ChevronUp, LogOut, Settings, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { api } from "@/lib/client-api";
@@ -25,6 +25,18 @@ export function Sidebar() {
 
   const displayName =
     user?.fullName || user?.primaryEmailAddress?.emailAddress || "Account";
+
+  // Ctrl/⌘ + .  toggles the sidebar (matches the reference shortcut).
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === ".") {
+        e.preventDefault();
+        setCollapsed((c) => !c);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const flowActive =
     pathname === "/dashboard" || pathname.startsWith("/workflow");
@@ -52,13 +64,15 @@ export function Sidebar() {
           // a panel-open icon on hover, expands the sidebar on click.
           <button
             onClick={() => setCollapsed(false)}
-            title="Expand sidebar"
             className="group relative flex h-7 w-7 items-center justify-center"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500 text-white transition-opacity group-hover:opacity-0">
               <Workflow className="h-4 w-4" />
             </span>
             <PanelLeftOpen className="absolute h-4 w-4 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100" />
+            <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 flex -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-md border border-hairline bg-white px-2 py-1 text-[11px] text-ink opacity-0 shadow-pop transition-opacity group-hover:opacity-100">
+              Open sidebar <kbd className="font-mono text-[10px] text-ink-faint">Ctrl .</kbd>
+            </span>
           </button>
         ) : (
           <>
@@ -70,13 +84,17 @@ export function Sidebar() {
                 Galaxy.ai
               </span>
             </Link>
-            <button
-              onClick={() => setCollapsed(true)}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-ink-faint hover:bg-ink/5"
-              title="Collapse sidebar"
-            >
-              <PanelLeftClose className="h-4 w-4" />
-            </button>
+            <div className="group relative flex">
+              <button
+                onClick={() => setCollapsed(true)}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-ink-faint hover:bg-ink/5"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+              <span className="pointer-events-none absolute right-0 top-full z-30 mt-2 flex items-center gap-2 whitespace-nowrap rounded-md border border-hairline bg-white px-2 py-1 text-[11px] text-ink opacity-0 shadow-pop transition-opacity group-hover:opacity-100">
+                Close sidebar <kbd className="font-mono text-[10px] text-ink-faint">Ctrl .</kbd>
+              </span>
+            </div>
           </>
         )}
       </div>
