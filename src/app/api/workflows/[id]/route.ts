@@ -45,6 +45,7 @@ export async function PATCH(
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.status !== undefined ? { status: body.status } : {}),
         ...(body.graph !== undefined ? { graph: body.graph as object } : {}),
+        ...(body.thumbnailUrl !== undefined ? { thumbnailUrl: body.thumbnailUrl } : {}),
       },
     });
     return json({ id: wf.id, updatedAt: wf.updatedAt.toISOString() });

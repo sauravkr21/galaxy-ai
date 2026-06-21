@@ -96,6 +96,7 @@ export const updateWorkflowSchema = z.object({
     .enum(["DRAFT", "READY", "RUNNING", "COMPLETED", "FAILED"])
     .optional(),
   graph: workflowGraphSchema.optional(),
+  thumbnailUrl: z.string().nullable().optional(),
 });
 
 export const startRunSchema = z.object({

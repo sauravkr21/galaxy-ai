@@ -125,6 +125,7 @@ export interface WorkflowSummary {
   updatedAt: string;
   createdAt: string;
   nodeCount: number;
+  thumbnailUrl: string | null;
 }
 
 export const GEMINI_MODELS = [

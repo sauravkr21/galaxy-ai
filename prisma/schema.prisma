@@ -45,9 +45,10 @@ enum NodeRunStatus {
 
 model Workflow {
   id        String         @id @default(cuid())
-  userId    String // Clerk user id — every query is scoped by this.
-  name      String         @default("New Workflow")
-  status    WorkflowStatus @default(DRAFT)
+  userId       String // Clerk user id — every query is scoped by this.
+  name         String         @default("New Workflow")
+  status       WorkflowStatus @default(DRAFT)
+  thumbnailUrl String? // optional card thumbnail (Transloadit URL)
   // { nodes: FlowNode[], edges: FlowEdge[], viewport?: {...} }
   graph     Json
   createdAt DateTime       @default(now())

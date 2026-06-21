@@ -28,7 +28,7 @@ export const api = {
 
   updateWorkflow: (
     id: string,
-    body: { name?: string; status?: string; graph?: WorkflowGraph },
+    body: { name?: string; status?: string; graph?: WorkflowGraph; thumbnailUrl?: string | null },
   ) =>
     fetch(`/api/workflows/${id}`, {
       method: "PATCH",

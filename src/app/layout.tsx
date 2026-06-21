@@ -18,7 +18,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Galaxy.ai",
+  title: "Magica",
   description:
     "A focused clone of the Galaxy.ai workflow builder for LLM workflows. Built with Next.js, React Flow, Gemini and Trigger.dev.",
 };

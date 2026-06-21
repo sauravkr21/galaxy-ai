@@ -16,11 +16,13 @@ import {
   ExternalLink,
   Files,
   Download,
+  ImagePlus,
   Image as ImageIcon,
 } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { buildSampleGraph, SAMPLE_WORKFLOW_NAME } from "@/lib/sample-workflow";
 import { importWorkflowJson, exportWorkflowJson } from "@/lib/workflow-io";
+import { uploadToTransloadit } from "@/lib/upload-client";
 import type { WorkflowSummary } from "@/types/flow";
 import { useRef } from "react";
 
@@ -95,6 +97,11 @@ export function DashboardClient({ initial }: { initial: WorkflowSummary[] }) {
   async function exportJson(item: WorkflowSummary) {
     const { name, graph } = await api.getWorkflow(item.id);
     exportWorkflowJson(name, graph);
+  }
+
+  async function setThumbnail(item: WorkflowSummary, url: string) {
+    await api.updateWorkflow(item.id, { thumbnailUrl: url });
+    setItems((xs) => xs.map((x) => (x.id === item.id ? { ...x, thumbnailUrl: url } : x)));
   }
 
   return (
@@ -206,6 +213,7 @@ export function DashboardClient({ initial }: { initial: WorkflowSummary[] }) {
                 onDuplicate={() => duplicate(item)}
                 onExport={() => exportJson(item)}
                 onDelete={() => remove(item)}
+                onSetThumbnail={(url) => setThumbnail(item, url)}
               />
             ))}
           </div>
@@ -215,10 +223,15 @@ export function DashboardClient({ initial }: { initial: WorkflowSummary[] }) {
   );
 }
 
-function Thumb({ children }: { children?: React.ReactNode }) {
+function Thumb({ src, children }: { src?: string | null; children?: React.ReactNode }) {
   return (
     <div className="relative flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-500 via-violet-600 to-indigo-700">
-      <WorkflowIcon className="h-8 w-8 text-white/80" />
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="thumbnail" className="h-full w-full object-cover" />
+      ) : (
+        <WorkflowIcon className="h-8 w-8 text-white/80" />
+      )}
       {children}
     </div>
   );
@@ -258,6 +271,7 @@ function WorkflowCard({
   onDuplicate,
   onExport,
   onDelete,
+  onSetThumbnail,
 }: {
   item: WorkflowSummary;
   onOpen: () => void;
@@ -265,31 +279,89 @@ function WorkflowCard({
   onDuplicate: () => void;
   onExport: () => void;
   onDelete: () => void;
+  onSetThumbnail: (url: string) => void;
 }) {
   const [menu, setMenu] = useState(false);
+  const [thumbOpen, setThumbOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const MENU = [
     { label: "Open", icon: <ExternalLink className="h-3.5 w-3.5" />, fn: onOpen },
     { label: "Rename", icon: <Pencil className="h-3.5 w-3.5" />, fn: onRename },
     { label: "Duplicate", icon: <Files className="h-3.5 w-3.5" />, fn: onDuplicate },
     { label: "Export JSON", icon: <Download className="h-3.5 w-3.5" />, fn: onExport },
   ];
+
+  async function pickFile(file: File) {
+    setUploading(true);
+    try {
+      const url = await uploadToTransloadit(file);
+      onSetThumbnail(url);
+      setThumbOpen(false);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <div className="group relative flex flex-col">
-      <button onClick={onOpen} className="flex flex-col text-left">
-        <Thumb>
-          <span className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-md bg-white/90 text-violet-600">
-            <ImageIcon className="h-3.5 w-3.5" />
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) pickFile(f);
+          e.target.value = "";
+        }}
+      />
+      <div onClick={onOpen} className="flex cursor-pointer flex-col text-left">
+        <Thumb src={item.thumbnailUrl}>
+          {/* Edit thumbnail control */}
+          <span
+            role="button"
+            onClick={(e) => { e.stopPropagation(); setThumbOpen((o) => !o); }}
+            className="group/edit absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-md bg-white/90 text-ink-muted opacity-0 shadow-sm transition-opacity hover:text-violet-600 group-hover:opacity-100"
+          >
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+            <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover/edit:opacity-100">
+              Edit thumbnail
+            </span>
           </span>
+          {thumbOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setThumbOpen(false); }} />
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute left-2 top-11 z-20 w-60 animate-fade-in rounded-xl border border-hairline bg-white p-3 text-left shadow-pop"
+              >
+                <p className="mb-2.5 text-[12px] leading-snug text-ink-muted">
+                  Add a file from your device or select one from your library
+                </p>
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border border-hairline bg-white py-2 text-[13px] font-medium text-ink hover:bg-ink/[0.03]"
+                >
+                  <ImageIcon className="h-4 w-4" /> Select Asset
+                </button>
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-violet-500 py-2 text-[13px] font-semibold text-white hover:bg-violet-600"
+                >
+                  <Plus className="h-4 w-4" /> Upload
+                </button>
+              </div>
+            </>
+          )}
         </Thumb>
         <h3 className="mt-2 truncate text-[13px] font-medium text-ink group-hover:text-violet-700">
           {item.name}
         </h3>
         <p className="text-[11px] text-ink-faint">
           Edited {formatDistanceToNow(new Date(item.updatedAt), { addSuffix: true })}
-          {" · "}
-          {item.nodeCount} nodes
         </p>
-      </button>
+      </div>
       <div className="absolute right-1.5 top-1.5">
         <button
           onClick={() => setMenu((o) => !o)}

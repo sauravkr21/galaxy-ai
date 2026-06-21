@@ -25,6 +25,7 @@ export default async function DashboardPage() {
       createdAt: w.createdAt.toISOString(),
       updatedAt: w.updatedAt.toISOString(),
       nodeCount: graph?.nodes?.length ?? 0,
+      thumbnailUrl: w.thumbnailUrl,
     };
   });
 
