@@ -18,6 +18,7 @@ import {
   Download,
   ImagePlus,
   Image as ImageIcon,
+  ChevronLeft,
 } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { buildSampleGraph, SAMPLE_WORKFLOW_NAME } from "@/lib/sample-workflow";
@@ -25,6 +26,16 @@ import { importWorkflowJson, exportWorkflowJson } from "@/lib/workflow-io";
 import { uploadToTransloadit } from "@/lib/upload-client";
 import type { WorkflowSummary } from "@/types/flow";
 import { useRef } from "react";
+
+// A small built-in asset library for "Select Asset" (no asset backend needed).
+const ASSET_LIBRARY = [
+  "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=70",
+  "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=70",
+  "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=70",
+  "https://images.unsplash.com/photo-1551434678-e076c223a692?w=400&q=70",
+  "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=70",
+  "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&q=70",
+];
 
 export function DashboardClient({ initial }: { initial: WorkflowSummary[] }) {
   const router = useRouter();
@@ -256,7 +267,7 @@ function TemplateCard({
           Template
         </span>
       </Thumb>
-      <h3 className="mt-2 truncate text-[13px] font-medium text-ink group-hover:text-violet-700">
+      <h3 className="mt-2 truncate text-[13px] font-medium text-ink">
         {title}
       </h3>
       <p className="text-[11px] text-ink-faint">{subtitle}</p>
@@ -283,8 +294,14 @@ function WorkflowCard({
 }) {
   const [menu, setMenu] = useState(false);
   const [thumbOpen, setThumbOpen] = useState(false);
+  const [thumbView, setThumbView] = useState<"menu" | "library">("menu");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  function openThumb() {
+    setThumbView("menu");
+    setThumbOpen((o) => !o);
+  }
   const MENU = [
     { label: "Open", icon: <ExternalLink className="h-3.5 w-3.5" />, fn: onOpen },
     { label: "Rename", icon: <Pencil className="h-3.5 w-3.5" />, fn: onRename },
@@ -321,11 +338,11 @@ function WorkflowCard({
           {/* Edit thumbnail control */}
           <span
             role="button"
-            onClick={(e) => { e.stopPropagation(); setThumbOpen((o) => !o); }}
+            onClick={(e) => { e.stopPropagation(); openThumb(); }}
             className="group/edit absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-md bg-white/90 text-ink-muted opacity-0 shadow-sm transition-opacity hover:text-violet-600 group-hover:opacity-100"
           >
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-            <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover/edit:opacity-100">
+            <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-hairline bg-white px-2 py-1 text-[10px] font-medium text-ink opacity-0 shadow-pop transition-opacity group-hover/edit:opacity-100">
               Edit thumbnail
             </span>
           </span>
@@ -334,28 +351,57 @@ function WorkflowCard({
               <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setThumbOpen(false); }} />
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="absolute left-2 top-11 z-20 w-60 animate-fade-in rounded-xl border border-hairline bg-white p-3 text-left shadow-pop"
+                className="absolute left-2 top-11 z-20 w-64 animate-fade-in rounded-xl border border-hairline bg-white p-3 text-left shadow-pop"
               >
-                <p className="mb-2.5 text-[12px] leading-snug text-ink-muted">
-                  Add a file from your device or select one from your library
-                </p>
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border border-hairline bg-white py-2 text-[13px] font-medium text-ink hover:bg-ink/[0.03]"
-                >
-                  <ImageIcon className="h-4 w-4" /> Select Asset
-                </button>
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-violet-500 py-2 text-[13px] font-semibold text-white hover:bg-violet-600"
-                >
-                  <Plus className="h-4 w-4" /> Upload
-                </button>
+                {thumbView === "menu" ? (
+                  <>
+                    <p className="mb-2.5 text-[12px] leading-snug text-ink-muted">
+                      Add a file from your device or select one from your library
+                    </p>
+                    <button
+                      onClick={() => setThumbView("library")}
+                      className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border border-hairline bg-white py-2 text-[13px] font-medium text-ink hover:bg-ink/[0.03]"
+                    >
+                      <ImageIcon className="h-4 w-4" /> Select Asset
+                    </button>
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      disabled={uploading}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-violet-500 py-2 text-[13px] font-semibold text-white hover:bg-violet-600 disabled:opacity-60"
+                    >
+                      {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Upload
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="mb-2 flex items-center gap-1.5">
+                      <button
+                        onClick={() => setThumbView("menu")}
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-ink-muted hover:bg-ink/5"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <span className="text-[12px] font-medium text-ink">Select an asset</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {ASSET_LIBRARY.map((url) => (
+                        <button
+                          key={url}
+                          onClick={() => { onSetThumbnail(url); setThumbOpen(false); }}
+                          className="aspect-square overflow-hidden rounded-md border border-hairline hover:ring-2 hover:ring-violet-400"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="asset" className="h-full w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
         </Thumb>
-        <h3 className="mt-2 truncate text-[13px] font-medium text-ink group-hover:text-violet-700">
+        <h3 className="mt-2 truncate text-[13px] font-medium text-ink">
           {item.name}
         </h3>
         <p className="text-[11px] text-ink-faint">
