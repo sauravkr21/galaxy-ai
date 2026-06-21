@@ -22,7 +22,7 @@ import {
 import { api } from "@/lib/client-api";
 import { buildSampleGraph, SAMPLE_WORKFLOW_NAME } from "@/lib/sample-workflow";
 import { importWorkflowJson, exportWorkflowJson } from "@/lib/workflow-io";
-import { uploadToTransloadit } from "@/lib/upload-client";
+import { uploadFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 import type { WorkflowSummary } from "@/types/flow";
 import { useRef } from "react";
@@ -312,7 +312,7 @@ function WorkflowCard({
   async function pickFile(file: File) {
     setUploading(true);
     try {
-      const url = await uploadToTransloadit(file);
+      const url = await uploadFile(file);
       onSetThumbnail(url);
       setThumbOpen(false);
     } finally {

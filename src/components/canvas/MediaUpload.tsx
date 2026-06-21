@@ -9,7 +9,7 @@ import {
   Loader2,
   Plus,
 } from "lucide-react";
-import { uploadToTransloadit } from "@/lib/upload-client";
+import { uploadFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 
 export function MediaUpload({
@@ -39,7 +39,7 @@ export function MediaUpload({
     setBusy(true);
     setError(null);
     try {
-      const url = await uploadToTransloadit(file);
+      const url = await uploadFile(file);
       onChange(url);
       setOpen(false);
     } catch (e) {

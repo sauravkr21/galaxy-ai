@@ -38,7 +38,7 @@ export function CropImageNode({
   return (
     <NodeShell
       nodeId={id}
-      title={data.label}
+      title="Crop Image"
       subtitle="Crops an image to Specified Dimensions"
       icon={<Crop className="h-3.5 w-3.5" />}
       accent="#0ea5e9"
