@@ -1,7 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Upload, X, Image as ImageIcon, Loader2, Link2 } from "lucide-react";
+import {
+  Upload,
+  X,
+  Image as ImageIcon,
+  ImagePlus,
+  Loader2,
+  Plus,
+} from "lucide-react";
 import { uploadToTransloadit } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +28,8 @@ export function MediaUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pasting, setPasting] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [selectingAsset, setSelectingAsset] = useState(false);
   const [urlDraft, setUrlDraft] = useState("");
 
   async function handleFile(file: File) {
@@ -30,6 +38,7 @@ export function MediaUpload({
     try {
       const url = await uploadToTransloadit(file);
       onChange(url);
+      setOpen(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
@@ -63,7 +72,7 @@ export function MediaUpload({
   }
 
   return (
-    <div className="nodrag">
+    <div className="nodrag relative">
       <input
         ref={inputRef}
         type="file"
@@ -74,55 +83,116 @@ export function MediaUpload({
           if (f) handleFile(f);
         }}
       />
-      {pasting ? (
-        <div className="flex items-center gap-1.5">
-          <input
-            autoFocus
-            value={urlDraft}
-            onChange={(e) => setUrlDraft(e.target.value)}
-            placeholder="https://…"
-            className="h-8 flex-1 rounded-md border border-hairline px-2 text-[12px] outline-none focus:border-violet-400"
+      <div className="flex items-center gap-1.5">
+        <button
+          disabled={disabled || busy}
+          onClick={() => {
+            setOpen((current) => !current);
+            setSelectingAsset(false);
+            setError(null);
+          }}
+          className={cn(
+            "flex h-9 flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-hairline text-[12px] font-medium text-ink-muted transition-colors hover:border-violet-300 hover:text-violet-600",
+            (disabled || busy) && "cursor-not-allowed opacity-60",
+          )}
+        >
+          {busy ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…
+            </>
+          ) : (
+            <>
+              <Upload className="h-3.5 w-3.5" /> {label}
+            </>
+          )}
+        </button>
+        <button
+          disabled={disabled || busy}
+          onClick={() => {
+            setOpen((current) => !current);
+            setSelectingAsset(false);
+            setError(null);
+          }}
+          title="Add media"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-hairline text-ink-muted hover:bg-ink/[0.03] hover:text-violet-600"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
+
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-label="Close upload menu"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setOpen(false)}
           />
-          <button
-            onClick={() => {
-              if (urlDraft.trim()) onChange(urlDraft.trim());
-              setPasting(false);
-              setUrlDraft("");
-            }}
-            className="h-8 rounded-md bg-violet-500 px-2 text-[12px] font-medium text-white"
-          >
-            Set
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-1.5">
-          <button
-            disabled={disabled || busy}
-            onClick={() => inputRef.current?.click()}
-            className={cn(
-              "flex h-9 flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-hairline text-[12px] font-medium text-ink-muted transition-colors hover:border-violet-300 hover:text-violet-600",
-              (disabled || busy) && "cursor-not-allowed opacity-60",
-            )}
-          >
-            {busy ? (
+          <div className="absolute left-4 top-[43px] z-50 h-[172px] w-[228px] rounded-xl border border-hairline bg-white p-3 shadow-pop">
+            {!selectingAsset ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…
+                <p className="h-9 text-[12px] leading-[17px] text-ink">
+                  Add a file from your device or select one from your library
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSelectingAsset(true)}
+                  className="mt-1 flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-hairline bg-white text-[12px] font-medium text-ink transition-colors hover:bg-ink/[0.03]"
+                >
+                  <ImagePlus className="h-4 w-4" /> Select Asset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => inputRef.current?.click()}
+                  className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-violet-600 text-[13px] font-medium text-white transition-colors hover:bg-violet-700"
+                >
+                  <Plus className="h-4 w-4" /> Upload
+                </button>
               </>
             ) : (
-              <>
-                <Upload className="h-3.5 w-3.5" /> {label}
-              </>
+              <div className="flex h-full flex-col">
+                <p className="text-[12px] leading-[17px] text-ink">
+                  Paste a URL from your asset library
+                </p>
+                <input
+                  autoFocus
+                  value={urlDraft}
+                  onChange={(e) => setUrlDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && urlDraft.trim()) {
+                      onChange(urlDraft.trim());
+                      setOpen(false);
+                      setUrlDraft("");
+                    }
+                  }}
+                  placeholder="https://…"
+                  className="mt-3 h-10 w-full rounded-lg border border-hairline px-2 text-[12px] outline-none focus:border-violet-400"
+                />
+                <div className="mt-auto flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectingAsset(false)}
+                    className="h-9 flex-1 rounded-lg border border-hairline text-[12px] text-ink-muted hover:bg-ink/[0.03]"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!urlDraft.trim()}
+                    onClick={() => {
+                      onChange(urlDraft.trim());
+                      setOpen(false);
+                      setUrlDraft("");
+                    }}
+                    className="h-9 flex-1 rounded-lg bg-violet-600 text-[12px] font-medium text-white disabled:opacity-50"
+                  >
+                    Select
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
-          <button
-            disabled={disabled}
-            onClick={() => setPasting(true)}
-            title="Paste a URL"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-hairline text-ink-muted hover:text-violet-600"
-          >
-            <Link2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
+          </div>
+        </>
       )}
       {error && <p className="mt-1 text-[11px] text-red-500">{error}</p>}
     </div>
