@@ -5,11 +5,18 @@ import { GEMINI_MODELS } from "@/types/flow";
 
 const runState = z.enum(["idle", "queued", "running", "completed", "failed"]);
 
+const requestField = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.enum(["text", "image"]),
+  value: z.string().nullable(),
+});
+
+// Strict new shape. Legacy DB workflows are migrated in the store on load
+// (the client always sends this shape back), so the API never sees old data.
 const requestInputsData = z.object({
   label: z.string(),
-  textField: z.string(),
-  imageUrl: z.string().nullable(),
-  imageName: z.string().nullable(),
+  fields: z.array(requestField),
   runState,
 });
 

@@ -6,8 +6,8 @@ import {
   useStore,
   type EdgeProps,
 } from "@xyflow/react";
-import { getPort } from "@/lib/nodes";
-import type { NodeKind, PortType } from "@/types/flow";
+import { getPort, requestFieldPortType } from "@/lib/nodes";
+import type { NodeKind, PortType, RequestInputsData } from "@/types/flow";
 
 const STROKE: Record<PortType, string> = {
   text: "#f5a623",
@@ -23,14 +23,17 @@ const STROKE: Record<PortType, string> = {
 export function DataEdge(props: EdgeProps) {
   const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, source, sourceHandleId } = props;
 
-  const sourceType = useStore((s) => {
+  const portType: PortType = useStore((s) => {
     const node = s.nodeLookup.get(source);
-    return (node?.type as NodeKind | undefined) ?? undefined;
+    if (!node) return "any";
+    if (node.type === "request-inputs") {
+      return (
+        requestFieldPortType(node.data as RequestInputsData, sourceHandleId ?? "") ??
+        "any"
+      );
+    }
+    return getPort(node.type as NodeKind, sourceHandleId ?? "", "source")?.type ?? "any";
   });
-
-  const portType: PortType =
-    (sourceType && getPort(sourceType, sourceHandleId ?? "", "source")?.type) ||
-    "any";
 
   const [path] = getBezierPath({
     sourceX,

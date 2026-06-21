@@ -78,6 +78,17 @@ export const NODE_SPECS: Record<NodeKind, NodeSpec> = {
  * Type-safe connection rule. A source port of type S may connect to a target
  * port of type T when the target is permissive (`any`) or the types match.
  */
+/** Port type for a Request-Inputs output handle, derived from its dynamic
+ *  field list (Request-Inputs outputs are not static in NODE_SPECS). */
+export function requestFieldPortType(
+  data: RequestInputsData,
+  handleId: string,
+): PortType | undefined {
+  const f = data.fields?.find((x) => x.id === handleId);
+  if (!f) return undefined;
+  return f.type === "image" ? "image" : "text";
+}
+
 export function canConnect(sourceType: PortType, targetType: PortType): boolean {
   if (targetType === "any") return true;
   if (sourceType === "any") return true;
@@ -101,9 +112,11 @@ export function defaultData(kind: NodeKind): NodeData {
     case "request-inputs":
       return {
         label: "Request-Inputs",
-        textField: "",
-        imageUrl: null,
-        imageName: null,
+        // Default fields keep the handle ids the sample + engine reference.
+        fields: [
+          { id: "text_field", name: "text_field", type: "text", value: "" },
+          { id: "image_field", name: "image_field", type: "image", value: null },
+        ],
         runState: "idle",
       } satisfies RequestInputsData;
     case "crop-image":

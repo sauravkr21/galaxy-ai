@@ -51,7 +51,7 @@ function localOutputs(node: FlowNode): NodeOutputs {
   switch (node.type) {
     case "request-inputs": {
       const d = node.data as RequestInputsData;
-      return { text_field: d.textField, image_field: d.imageUrl };
+      return Object.fromEntries((d.fields ?? []).map((f) => [f.id, f.value]));
     }
     case "crop-image": {
       const d = node.data as CropImageData;

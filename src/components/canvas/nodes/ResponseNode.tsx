@@ -28,7 +28,7 @@ function upstreamValue(
   if (sourceType === "crop-image") return (data as CropImageData).outputUrl;
   if (sourceType === "request-inputs") {
     const d = data as RequestInputsData;
-    return sourceHandle === "text_field" ? d.textField : d.imageUrl;
+    return d.fields?.find((f) => f.id === sourceHandle)?.value ?? null;
   }
   return null;
 }
@@ -60,6 +60,7 @@ export function ResponseNode({
       runState={data.runState}
       selected={selected}
       width={300}
+      deletable={false}
     >
       <div>
         <Port id="result" label="result" type="any" side="left" connected={incoming.length > 0} />

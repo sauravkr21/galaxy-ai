@@ -39,10 +39,16 @@ export function buildStarterGraph(): WorkflowGraph {
 export function buildSampleGraph(): WorkflowGraph {
   const ri: RequestInputsData = {
     ...(defaultData("request-inputs") as RequestInputsData),
-    textField:
-      "Product: Wireless Bluetooth Headphones. Features: Noise cancellation, 30-hour battery, foldable design.",
-    imageUrl: SAMPLE_IMAGE,
-    imageName: "product-photo.jpg",
+    fields: [
+      {
+        id: "text_field",
+        name: "text_field",
+        type: "text",
+        value:
+          "Product: Wireless Bluetooth Headphones. Features: Noise cancellation, 30-hour battery, foldable design.",
+      },
+      { id: "image_field", name: "image_field", type: "image", value: SAMPLE_IMAGE },
+    ],
   };
 
   const crop1: CropImageData = {

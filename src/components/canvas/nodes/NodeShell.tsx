@@ -18,6 +18,7 @@ export function NodeShell({
   children,
   width = 300,
   showRun = false,
+  deletable = true,
 }: {
   nodeId: string;
   title: string;
@@ -30,6 +31,7 @@ export function NodeShell({
   children: React.ReactNode;
   width?: number;
   showRun?: boolean;
+  deletable?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const deleteNode = useWorkflowStore((s) => s.deleteNode);
@@ -70,6 +72,7 @@ export function NodeShell({
         ) : (
           <StatusOnly runState={runState} />
         )}
+        {deletable && (
         <div className="relative">
           <button
             onClick={() => setMenuOpen((o) => !o)}
@@ -95,6 +98,7 @@ export function NodeShell({
             </>
           )}
         </div>
+        )}
       </div>
 
       {/* Body */}

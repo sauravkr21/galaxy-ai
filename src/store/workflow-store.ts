@@ -16,9 +16,16 @@ import {
   NodeData,
   NodeKind,
   NodeRunState,
+  RequestInputsData,
   WorkflowGraph,
 } from "@/types/flow";
-import { canConnect, defaultData, getPort, NODE_SPECS } from "@/lib/nodes";
+import {
+  canConnect,
+  defaultData,
+  getPort,
+  NODE_SPECS,
+  requestFieldPortType,
+} from "@/lib/nodes";
 import { incomingMap, topoSort } from "@/lib/dag";
 
 export type AppNode = Node<NodeData, NodeKind>;
@@ -92,6 +99,29 @@ function normalizeEdges(edges: AppEdge[]): AppEdge[] {
   return edges.map((e) => ({ ...e, type: "data", animated: true }));
 }
 
+/** Migrate legacy Request-Inputs data (fixed textField/imageUrl) to the
+ *  dynamic `fields` shape so older workflows keep working. */
+function migrateNodes(nodes: AppNode[]): AppNode[] {
+  return nodes.map((n) => {
+    if (n.type !== "request-inputs") return n;
+    const d = n.data as Record<string, unknown>;
+    if (Array.isArray(d.fields)) return n;
+    return {
+      ...n,
+      data: {
+        label: (d.label as string) ?? "Request-Inputs",
+        fields: [
+          { id: "text_field", name: "text_field", type: "text", value: (d.textField as string) ?? "" },
+          { id: "image_field", name: "image_field", type: "image", value: (d.imageUrl as string) ?? null },
+        ],
+        runState: (d.runState as NodeRunState) ?? "idle",
+      } as unknown as NodeData,
+    };
+  });
+}
+
+const PROTECTED_KINDS: NodeKind[] = ["request-inputs", "response"];
+
 const HISTORY_LIMIT = 50;
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
@@ -112,7 +142,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({
       workflowId,
       name,
-      nodes: graph.nodes as unknown as AppNode[],
+      nodes: migrateNodes(graph.nodes as unknown as AppNode[]),
       edges: normalizeEdges(graph.edges as unknown as AppEdge[]),
       past: [],
       future: [],
@@ -146,10 +176,15 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const sNode = nodes.find((n) => n.id === source);
     const tNode = nodes.find((n) => n.id === target);
     if (!sNode || !tNode) return false;
-    const sPort = getPort(sNode.type as NodeKind, sourceHandle ?? "", "source");
+    // Request-Inputs outputs are dynamic (per field), so derive their type
+    // from the node's fields rather than the static NODE_SPECS.
+    const sType =
+      sNode.type === "request-inputs"
+        ? requestFieldPortType(sNode.data as RequestInputsData, sourceHandle ?? "")
+        : getPort(sNode.type as NodeKind, sourceHandle ?? "", "source")?.type;
     const tPort = getPort(tNode.type as NodeKind, targetHandle ?? "", "target");
-    if (!sPort || !tPort) return false;
-    return canConnect(sPort.type, tPort.type);
+    if (!sType || !tPort) return false;
+    return canConnect(sType, tPort.type);
   },
 
   onConnect: (conn) => {
@@ -189,6 +224,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     })),
 
   deleteNode: (id) => {
+    const node = get().nodes.find((n) => n.id === id);
+    // Pre-placed Request-Inputs / Response cannot be deleted.
+    if (node && PROTECTED_KINDS.includes(node.type as NodeKind)) return;
     get().pushHistory();
     set((s) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
@@ -198,7 +236,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   deleteSelected: () => {
-    const ids = new Set(get().selectedNodeIds);
+    const nodes = get().nodes;
+    const ids = new Set(
+      get().selectedNodeIds.filter((id) => {
+        const n = nodes.find((x) => x.id === id);
+        return n && !PROTECTED_KINDS.includes(n.type as NodeKind);
+      }),
+    );
     if (!ids.size) return;
     get().pushHistory();
     set((s) => ({
@@ -348,7 +392,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   loadGraph: (graph) => {
     get().pushHistory();
     set({
-      nodes: graph.nodes as unknown as AppNode[],
+      nodes: migrateNodes(graph.nodes as unknown as AppNode[]),
       edges: normalizeEdges(graph.edges as unknown as AppEdge[]),
       dirty: true,
     });
