@@ -104,6 +104,9 @@ export function selectionToRunSet(
   mode: "full" | "single" | "multi",
   targets: string[],
 ): Set<string> {
-  if (mode === "full") return new Set(graph.nodes.map((n) => n.id));
-  return new Set(targets);
+  // Sticky notes are annotations — never part of execution.
+  const runnable = graph.nodes.filter((n) => n.type !== "sticky");
+  if (mode === "full") return new Set(runnable.map((n) => n.id));
+  const targetSet = new Set(targets);
+  return new Set(runnable.filter((n) => targetSet.has(n.id)).map((n) => n.id));
 }

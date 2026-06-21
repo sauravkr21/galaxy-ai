@@ -14,6 +14,7 @@ import { Map as MapIcon } from "lucide-react";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { nodeTypes, edgeTypes } from "./registry";
 import { CanvasToolbar } from "./CanvasToolbar";
+import { AddStickyBar } from "./AddStickyBar";
 import { cn } from "@/lib/utils";
 import type { NodeKind } from "@/types/flow";
 
@@ -22,6 +23,7 @@ const MINIMAP_COLOR: Record<NodeKind, string> = {
   "crop-image": "#0ea5e9",
   gemini: "#7c5cff",
   response: "#6a45f0",
+  sticky: "#f5a623",
 };
 
 export function FlowCanvas() {
@@ -136,12 +138,14 @@ export function FlowCanvas() {
         </button>
       </Panel>
 
-      <Panel position="bottom-center">
+      <Panel position="bottom-left">
         <CanvasToolbar
-          onAdd={handleAdd}
           selectMode={selectMode}
           onToggleSelectMode={() => setSelectMode((s) => !s)}
         />
+      </Panel>
+      <Panel position="bottom-center">
+        <AddStickyBar onAdd={handleAdd} />
       </Panel>
     </ReactFlow>
   );

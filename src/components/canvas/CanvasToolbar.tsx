@@ -3,45 +3,27 @@
 import { useState } from "react";
 import { useReactFlow, useStore } from "@xyflow/react";
 import {
-  Plus,
   Undo2,
   Redo2,
   ZoomIn,
   ZoomOut,
   Maximize2,
-  MousePointer2,
-  Keyboard,
-  ChevronUp,
-  ChevronDown,
-  Inbox,
-  Crop,
-  Sparkles,
-  Flag,
+  Move,
+  Command,
+  LayoutGrid,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import type { NodeKind } from "@/types/flow";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { cn } from "@/lib/utils";
 
-const ADD_ITEMS: {
-  kind: NodeKind;
-  label: string;
-  desc: string;
-  icon: React.ReactNode;
-  accent: string;
-}[] = [
-  { kind: "request-inputs", label: "Request-Inputs", desc: "Source of text + image inputs", icon: <Inbox className="h-4 w-4" />, accent: "#1a1a23" },
-  { kind: "crop-image", label: "Crop Image", desc: "Crop via Trigger.dev (30s+)", icon: <Crop className="h-4 w-4" />, accent: "#0ea5e9" },
-  { kind: "gemini", label: "Gemini 3.1 Pro", desc: "Call Google Gemini", icon: <Sparkles className="h-4 w-4" />, accent: "#7c5cff" },
-  { kind: "response", label: "Response", desc: "Collect the final result", icon: <Flag className="h-4 w-4" />, accent: "#6a45f0" },
-];
-
-/** Small icon button with a dark tooltip above (matching the reference). */
+/** Icon button with a dark tooltip above (matching the reference). */
 function ToolBtn({
   label,
   onClick,
   active,
-  children,
   disabled,
+  children,
 }: {
   label: string;
   onClick?: () => void;
@@ -73,11 +55,9 @@ function ToolBtn({
 const Divider = () => <div className="mx-0.5 h-5 w-px bg-hairline" />;
 
 export function CanvasToolbar({
-  onAdd,
   selectMode,
   onToggleSelectMode,
 }: {
-  onAdd: (kind: NodeKind) => void;
   selectMode: boolean;
   onToggleSelectMode: () => void;
 }) {
@@ -85,18 +65,18 @@ export function CanvasToolbar({
   const zoom = useStore((s) => s.transform[2]);
   const undo = useWorkflowStore((s) => s.undo);
   const redo = useWorkflowStore((s) => s.redo);
+  const autoLayout = useWorkflowStore((s) => s.autoLayout);
   const canUndo = useWorkflowStore((s) => s.past.length > 0);
   const canRedo = useWorkflowStore((s) => s.future.length > 0);
 
-  const [addOpen, setAddOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [hidden, setHidden] = useState(false);
 
-  if (hidden) {
+  if (collapsed) {
     return (
       <div className="rounded-xl border border-hairline bg-white/95 p-1 shadow-pop backdrop-blur">
-        <ToolBtn label="Show controls" onClick={() => setHidden(false)}>
-          <ChevronUp className="h-4 w-4" />
+        <ToolBtn label="Expand controls" onClick={() => setCollapsed(false)}>
+          <ChevronRight className="h-4 w-4" />
         </ToolBtn>
       </div>
     );
@@ -104,34 +84,9 @@ export function CanvasToolbar({
 
   return (
     <div className="relative flex items-center gap-0.5 rounded-xl border border-hairline bg-white/95 px-1.5 py-1 shadow-pop backdrop-blur">
-      {/* Add node */}
-      <div className="relative">
-        <ToolBtn label="Add node" onClick={() => setAddOpen((o) => !o)} active={addOpen}>
-          <Plus className="h-4 w-4" />
-        </ToolBtn>
-        {addOpen && (
-          <>
-            <div className="fixed inset-0 z-0" onClick={() => setAddOpen(false)} />
-            <div className="absolute bottom-full left-0 z-10 mb-3 w-64 animate-fade-in rounded-2xl border border-hairline bg-white p-1.5 shadow-pop">
-              {ADD_ITEMS.map((it) => (
-                <button
-                  key={it.kind}
-                  onClick={() => { onAdd(it.kind); setAddOpen(false); }}
-                  className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-violet-50"
-                >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white" style={{ background: it.accent }}>
-                    {it.icon}
-                  </span>
-                  <span className="flex flex-col">
-                    <span className="text-[13px] font-semibold text-ink">{it.label}</span>
-                    <span className="text-[11px] text-ink-muted">{it.desc}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+      <ToolBtn label="Collapse controls" onClick={() => setCollapsed(true)}>
+        <ChevronLeft className="h-4 w-4" />
+      </ToolBtn>
 
       <Divider />
 
@@ -141,6 +96,32 @@ export function CanvasToolbar({
       <ToolBtn label="Redo" onClick={redo} disabled={!canRedo}>
         <Redo2 className="h-4 w-4" />
       </ToolBtn>
+
+      <div className="relative">
+        <ToolBtn label="Keyboard shortcuts" onClick={() => setShortcutsOpen((o) => !o)} active={shortcutsOpen}>
+          <Command className="h-4 w-4" />
+        </ToolBtn>
+        {shortcutsOpen && (
+          <>
+            <div className="fixed inset-0 z-0" onClick={() => setShortcutsOpen(false)} />
+            <div className="absolute bottom-full left-0 z-10 mb-3 w-56 animate-fade-in rounded-xl border border-hairline bg-white p-2 text-[11px] shadow-pop">
+              <p className="mb-1.5 px-1 font-semibold text-ink">Keyboard shortcuts</p>
+              {[
+                ["Delete", "Delete selection"],
+                ["Ctrl/⌘ Z", "Undo"],
+                ["Ctrl/⌘ ⇧ Z", "Redo"],
+                ["Scroll", "Zoom"],
+                ["Drag", "Pan"],
+              ].map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between px-1 py-0.5">
+                  <span className="text-ink-muted">{v}</span>
+                  <kbd className="rounded bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] text-ink">{k}</kbd>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
       <Divider />
 
@@ -157,48 +138,21 @@ export function CanvasToolbar({
       <ToolBtn label="Zoom in" onClick={() => zoomIn()}>
         <ZoomIn className="h-4 w-4" />
       </ToolBtn>
-      <ToolBtn label="Fit view" onClick={() => fitView({ padding: 0.3, duration: 200 })}>
-        <Maximize2 className="h-4 w-4" />
-      </ToolBtn>
 
       <Divider />
 
+      <ToolBtn label="Fit view" onClick={() => fitView({ padding: 0.3, duration: 200 })}>
+        <Maximize2 className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn label="Tidy layout" onClick={autoLayout}>
+        <LayoutGrid className="h-4 w-4" />
+      </ToolBtn>
       <ToolBtn
-        label={selectMode ? "Select mode (on)" : "Select mode"}
+        label={selectMode ? "Select mode (on)" : "Select / move"}
         onClick={onToggleSelectMode}
         active={selectMode}
       >
-        <MousePointer2 className="h-4 w-4" />
-      </ToolBtn>
-
-      <div className="relative">
-        <ToolBtn label="Keyboard shortcuts" onClick={() => setShortcutsOpen((o) => !o)} active={shortcutsOpen}>
-          <Keyboard className="h-4 w-4" />
-        </ToolBtn>
-        {shortcutsOpen && (
-          <>
-            <div className="fixed inset-0 z-0" onClick={() => setShortcutsOpen(false)} />
-            <div className="absolute bottom-full right-0 z-10 mb-3 w-56 animate-fade-in rounded-xl border border-hairline bg-white p-2 text-[11px] shadow-pop">
-              <p className="mb-1.5 px-1 font-semibold text-ink">Keyboard shortcuts</p>
-              {[
-                ["Delete / Backspace", "Delete selection"],
-                ["Ctrl / ⌘ + Z", "Undo"],
-                ["Ctrl / ⌘ + Shift + Z", "Redo"],
-                ["Scroll / pinch", "Zoom"],
-                ["Drag canvas", "Pan"],
-              ].map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between px-1 py-0.5">
-                  <span className="text-ink-muted">{v}</span>
-                  <kbd className="rounded bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] text-ink">{k}</kbd>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      <ToolBtn label="Hide controls" onClick={() => setHidden(true)}>
-        <ChevronDown className="h-4 w-4" />
+        <Move className="h-4 w-4" />
       </ToolBtn>
     </div>
   );

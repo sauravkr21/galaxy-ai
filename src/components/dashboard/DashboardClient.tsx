@@ -13,10 +13,14 @@ import {
   Loader2,
   Workflow as WorkflowIcon,
   Search,
+  ExternalLink,
+  Files,
+  Download,
+  Image as ImageIcon,
 } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { buildSampleGraph, SAMPLE_WORKFLOW_NAME } from "@/lib/sample-workflow";
-import { importWorkflowJson } from "@/lib/workflow-io";
+import { importWorkflowJson, exportWorkflowJson } from "@/lib/workflow-io";
 import type { WorkflowSummary } from "@/types/flow";
 import { useRef } from "react";
 
@@ -80,6 +84,17 @@ export function DashboardClient({ initial }: { initial: WorkflowSummary[] }) {
     if (!window.confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
     await api.deleteWorkflow(item.id);
     setItems((xs) => xs.filter((x) => x.id !== item.id));
+  }
+
+  async function duplicate(item: WorkflowSummary) {
+    const { graph } = await api.getWorkflow(item.id);
+    await api.createWorkflow({ name: `${item.name} Copy`, graph });
+    setItems(await api.listWorkflows());
+  }
+
+  async function exportJson(item: WorkflowSummary) {
+    const { name, graph } = await api.getWorkflow(item.id);
+    exportWorkflowJson(name, graph);
   }
 
   return (
@@ -188,6 +203,8 @@ export function DashboardClient({ initial }: { initial: WorkflowSummary[] }) {
                 item={item}
                 onOpen={() => router.push(`/workflow/${item.id}`)}
                 onRename={() => rename(item)}
+                onDuplicate={() => duplicate(item)}
+                onExport={() => exportJson(item)}
                 onDelete={() => remove(item)}
               />
             ))}
@@ -238,18 +255,32 @@ function WorkflowCard({
   item,
   onOpen,
   onRename,
+  onDuplicate,
+  onExport,
   onDelete,
 }: {
   item: WorkflowSummary;
   onOpen: () => void;
   onRename: () => void;
+  onDuplicate: () => void;
+  onExport: () => void;
   onDelete: () => void;
 }) {
   const [menu, setMenu] = useState(false);
+  const MENU = [
+    { label: "Open", icon: <ExternalLink className="h-3.5 w-3.5" />, fn: onOpen },
+    { label: "Rename", icon: <Pencil className="h-3.5 w-3.5" />, fn: onRename },
+    { label: "Duplicate", icon: <Files className="h-3.5 w-3.5" />, fn: onDuplicate },
+    { label: "Export JSON", icon: <Download className="h-3.5 w-3.5" />, fn: onExport },
+  ];
   return (
     <div className="group relative flex flex-col">
       <button onClick={onOpen} className="flex flex-col text-left">
-        <Thumb />
+        <Thumb>
+          <span className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-md bg-white/90 text-violet-600">
+            <ImageIcon className="h-3.5 w-3.5" />
+          </span>
+        </Thumb>
         <h3 className="mt-2 truncate text-[13px] font-medium text-ink group-hover:text-violet-700">
           {item.name}
         </h3>
@@ -262,20 +293,24 @@ function WorkflowCard({
       <div className="absolute right-1.5 top-1.5">
         <button
           onClick={() => setMenu((o) => !o)}
-          className="flex h-7 w-7 items-center justify-center rounded-md bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60 group-hover:opacity-100"
+          className="flex h-7 w-7 items-center justify-center rounded-md bg-white/90 text-ink-muted opacity-0 shadow-sm transition-opacity hover:bg-white group-hover:opacity-100"
         >
           <MoreVertical className="h-4 w-4" />
         </button>
         {menu && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setMenu(false)} />
-            <div className="absolute right-0 top-8 z-20 w-36 animate-fade-in rounded-lg border border-hairline bg-white p-1 shadow-pop">
-              <button
-                onClick={() => { setMenu(false); onRename(); }}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-ink hover:bg-ink/5"
-              >
-                <Pencil className="h-3.5 w-3.5" /> Rename
-              </button>
+            <div className="absolute right-0 top-8 z-20 w-40 animate-fade-in rounded-lg border border-hairline bg-white p-1 shadow-pop">
+              {MENU.map((m) => (
+                <button
+                  key={m.label}
+                  onClick={() => { setMenu(false); m.fn(); }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-ink hover:bg-ink/5"
+                >
+                  {m.icon} {m.label}
+                </button>
+              ))}
+              <div className="my-1 h-px bg-hairline" />
               <button
                 onClick={() => { setMenu(false); onDelete(); }}
                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-red-600 hover:bg-red-50"

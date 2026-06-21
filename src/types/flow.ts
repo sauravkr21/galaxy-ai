@@ -2,7 +2,12 @@
 // shared by the canvas, the Zustand store, the API routes (via Zod) and the
 // Trigger.dev tasks.
 
-export type NodeKind = "request-inputs" | "crop-image" | "gemini" | "response";
+export type NodeKind =
+  | "request-inputs"
+  | "crop-image"
+  | "gemini"
+  | "response"
+  | "sticky";
 
 /** Runtime status used to drive the pulsating glow + status badge. */
 export type NodeRunState = "idle" | "queued" | "running" | "completed" | "failed";
@@ -68,6 +73,12 @@ export type GeminiData = {
   runState: NodeRunState;
 };
 
+export type StickyData = {
+  label: string;
+  text: string;
+  runState: NodeRunState;
+};
+
 export type ResponseData = {
   label: string;
   /** Identifier for the collected result, e.g. "gemini_3_1_pro". */
@@ -83,7 +94,8 @@ export type NodeData =
   | RequestInputsData
   | CropImageData
   | GeminiData
-  | ResponseData;
+  | ResponseData
+  | StickyData;
 
 export interface FlowNode<T = NodeData> {
   id: string;

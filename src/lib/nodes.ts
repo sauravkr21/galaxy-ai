@@ -7,6 +7,7 @@ import {
   PortType,
   RequestInputsData,
   ResponseData,
+  StickyData,
   DEFAULT_GEMINI_MODEL,
 } from "@/types/flow";
 
@@ -61,6 +62,14 @@ export const NODE_SPECS: Record<NodeKind, NodeSpec> = {
     executable: false,
     description: "Collects the final workflow result. No output handle.",
     inputs: [{ id: "result", label: "result", type: "any" }],
+    outputs: [],
+  },
+  sticky: {
+    kind: "sticky",
+    title: "Note",
+    executable: false,
+    description: "A canvas annotation. Not part of execution.",
+    inputs: [],
     outputs: [],
   },
 };
@@ -127,6 +136,8 @@ export function defaultData(kind: NodeKind): NodeData {
         keys: {},
         runState: "idle",
       } satisfies ResponseData;
+    case "sticky":
+      return { label: "Note", text: "", runState: "idle" } satisfies StickyData;
   }
 }
 

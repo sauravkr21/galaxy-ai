@@ -53,12 +53,18 @@ const responseData = z.object({
   runState,
 });
 
+const stickyData = z.object({
+  label: z.string(),
+  text: z.string(),
+  runState,
+});
+
 export const flowNodeSchema = z.object({
   id: z.string(),
-  type: z.enum(["request-inputs", "crop-image", "gemini", "response"]),
+  type: z.enum(["request-inputs", "crop-image", "gemini", "response", "sticky"]),
   position: z.object({ x: z.number(), y: z.number() }),
   // Discriminating per-type would be stricter, but the union keeps import lenient.
-  data: z.union([requestInputsData, cropImageData, geminiData, responseData]),
+  data: z.union([requestInputsData, cropImageData, geminiData, responseData, stickyData]),
 });
 
 export const flowEdgeSchema = z.object({

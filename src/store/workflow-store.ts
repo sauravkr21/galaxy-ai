@@ -19,6 +19,7 @@ import {
   WorkflowGraph,
 } from "@/types/flow";
 import { canConnect, defaultData, getPort, NODE_SPECS } from "@/lib/nodes";
+import { incomingMap, topoSort } from "@/lib/dag";
 
 export type AppNode = Node<NodeData, NodeKind>;
 export type AppEdge = Edge;
@@ -64,6 +65,7 @@ interface WorkflowState {
   pushHistory: () => void;
   undo: () => void;
   redo: () => void;
+  autoLayout: () => void;
 
   setNodeRunState: (id: string, runState: NodeRunState) => void;
   setManyRunState: (ids: string[], runState: NodeRunState) => void;
@@ -247,6 +249,40 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         dirty: true,
       };
     }),
+
+  autoLayout: () => {
+    const { nodes, edges } = get();
+    const graph = {
+      nodes: nodes.map((n) => ({ id: n.id, type: n.type as NodeKind, position: n.position, data: n.data })),
+      edges: edges.map((e) => ({ id: e.id, source: e.source, sourceHandle: e.sourceHandle ?? "", target: e.target, targetHandle: e.targetHandle ?? "" })),
+    };
+    const order = topoSort(graph);
+    if (!order) return; // cycle — skip tidy
+    const level = new Map<string, number>();
+    const incoming = incomingMap(graph);
+    for (const id of order) {
+      const preds = incoming.get(id) ?? [];
+      const max = preds.reduce((m, p) => Math.max(m, (level.get(p.nodeId) ?? 0) + 1), 0);
+      level.set(id, max);
+    }
+    const byLevel = new Map<number, string[]>();
+    for (const n of nodes) {
+      if (n.type === "sticky") continue;
+      const l = level.get(n.id) ?? 0;
+      (byLevel.get(l) ?? byLevel.set(l, []).get(l)!).push(n.id);
+    }
+    const pos = new Map<string, { x: number; y: number }>();
+    for (const [l, ids] of byLevel) {
+      ids.forEach((id, i) => pos.set(id, { x: l * 400, y: i * 260 }));
+    }
+    get().pushHistory();
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        pos.has(n.id) ? { ...n, position: pos.get(n.id)! } : n,
+      ),
+      dirty: true,
+    }));
+  },
 
   setNodeRunState: (id, runState) =>
     set((s) => ({
