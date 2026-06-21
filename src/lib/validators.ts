@@ -8,7 +8,7 @@ const runState = z.enum(["idle", "queued", "running", "completed", "failed"]);
 const requestField = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.enum(["text", "image"]),
+  type: z.enum(["text", "number", "boolean", "image", "audio", "video", "media", "file"]),
   value: z.string().nullable(),
 });
 

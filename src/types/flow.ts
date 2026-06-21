@@ -26,7 +26,15 @@ export interface PortDef {
 // NOTE: the per-node data payloads are `type` aliases (not interfaces) so they
 // satisfy React Flow's `Node<T extends Record<string, unknown>>` constraint via
 // TypeScript's implicit index signatures.
-export type RequestFieldType = "text" | "image";
+export type RequestFieldType =
+  | "text"
+  | "number"
+  | "boolean"
+  | "image"
+  | "audio"
+  | "video"
+  | "media"
+  | "file";
 
 export type RequestField = {
   id: string; // stable handle id (edges reference this)

@@ -32,6 +32,7 @@ export function NodeShell({
   width = 300,
   showRun = false,
   deletable = true,
+  showMenu = true,
   cost,
 }: {
   nodeId: string;
@@ -46,6 +47,7 @@ export function NodeShell({
   width?: number;
   showRun?: boolean;
   deletable?: boolean;
+  showMenu?: boolean;
   cost?: string;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -87,27 +89,25 @@ export function NodeShell({
             </div>
           )}
         </div>
-        {showRun && (
-          <>
-            <div className="group/info relative flex">
-              <button className="nodrag flex h-6 w-6 items-center justify-center rounded-md text-ink-faint hover:bg-ink/5" aria-label="Info">
-                <Info className="h-3.5 w-3.5" />
-              </button>
-              {subtitle && (
-                <span className="pointer-events-none absolute right-0 top-7 z-30 w-48 rounded-md border border-hairline bg-white px-2 py-1 text-[10px] text-ink-muted opacity-0 shadow-pop transition-opacity group-hover/info:opacity-100">
-                  {subtitle}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => clearNodeOutput(nodeId)}
-              className="nodrag flex h-6 w-6 items-center justify-center rounded-md text-ink-faint hover:bg-ink/5"
-              aria-label="Reset output"
-              title="Reset output"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
+        {subtitle && (
+          <div className="group/info relative flex">
+            <button className="nodrag flex h-6 w-6 items-center justify-center rounded-md text-ink-faint hover:bg-ink/5" aria-label="Info">
+              <Info className="h-3.5 w-3.5" />
             </button>
-          </>
+            <span className="pointer-events-none absolute right-0 top-7 z-30 w-52 rounded-md border border-hairline bg-white px-2 py-1.5 text-[10px] leading-snug text-ink-muted opacity-0 shadow-pop transition-opacity group-hover/info:opacity-100">
+              {subtitle}
+            </span>
+          </div>
+        )}
+        {showRun && (
+          <button
+            onClick={() => clearNodeOutput(nodeId)}
+            className="nodrag flex h-6 w-6 items-center justify-center rounded-md text-ink-faint hover:bg-ink/5"
+            aria-label="Reset output"
+            title="Reset output"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
         )}
         {headerExtra}
         {showRun ? (
@@ -115,6 +115,7 @@ export function NodeShell({
         ) : (
           <StatusOnly runState={runState} />
         )}
+        {showMenu && (
         <div className="relative">
           <button
             onClick={() => setMenuOpen((o) => !o)}
@@ -153,6 +154,7 @@ export function NodeShell({
             </>
           )}
         </div>
+        )}
       </div>
 
       {/* Body */}

@@ -55,12 +55,14 @@ export function ResponseNode({
     <NodeShell
       nodeId={id}
       title={data.label}
+      subtitle="Connect node outputs here to define what your workflow returns. These values appear as results in Playground and API responses."
       icon={<Flag className="h-3.5 w-3.5" />}
       accent="#6a45f0"
       runState={data.runState}
       selected={selected}
       width={300}
       deletable={false}
+      showMenu={false}
     >
       <div>
         <Port id="result" label="result" type="any" side="left" connected={incoming.length > 0} />

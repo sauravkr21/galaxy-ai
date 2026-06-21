@@ -92,7 +92,22 @@ export function requestFieldPortType(
 ): PortType | undefined {
   const f = data.fields?.find((x) => x.id === handleId);
   if (!f) return undefined;
-  return f.type === "image" ? "image" : "text";
+  switch (f.type) {
+    case "image":
+      return "image";
+    case "audio":
+      return "audio";
+    case "video":
+      return "video";
+    case "file":
+      return "file";
+    case "number":
+    case "boolean":
+    case "media":
+      return "any";
+    default:
+      return "text";
+  }
 }
 
 export function canConnect(sourceType: PortType, targetType: PortType): boolean {
