@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ReactFlow,
   Background,
   BackgroundVariant,
-  Controls,
   MiniMap,
   Panel,
   useReactFlow,
@@ -13,7 +12,7 @@ import {
 } from "@xyflow/react";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { nodeTypes, edgeTypes } from "./registry";
-import { NodePicker } from "./NodePicker";
+import { CanvasToolbar } from "./CanvasToolbar";
 import type { NodeKind } from "@/types/flow";
 
 const MINIMAP_COLOR: Record<NodeKind, string> = {
@@ -37,6 +36,7 @@ export function FlowCanvas() {
   const redo = useWorkflowStore((s) => s.redo);
   const addNode = useWorkflowStore((s) => s.addNode);
 
+  const [selectMode, setSelectMode] = useState(false);
   const { screenToFlowPosition } = useReactFlow();
 
   const onSelectionChange = useCallback(
@@ -102,11 +102,12 @@ export function FlowCanvas() {
       fitViewOptions={{ padding: 0.3, maxZoom: 1 }}
       minZoom={0.15}
       maxZoom={2}
+      panOnDrag={!selectMode}
+      selectionOnDrag={selectMode}
       proOptions={{ hideAttribution: true }}
       className="bg-canvas"
     >
       <Background variant={BackgroundVariant.Dots} gap={22} size={1.4} color="#d7d7e0" />
-      <Controls showInteractive={false} className="!shadow-pop" />
       <MiniMap
         pannable
         zoomable
@@ -115,7 +116,11 @@ export function FlowCanvas() {
         className="!bottom-4 !right-4"
       />
       <Panel position="bottom-center">
-        <NodePicker onAdd={handleAdd} />
+        <CanvasToolbar
+          onAdd={handleAdd}
+          selectMode={selectMode}
+          onToggleSelectMode={() => setSelectMode((s) => !s)}
+        />
       </Panel>
     </ReactFlow>
   );
