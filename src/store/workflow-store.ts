@@ -108,7 +108,7 @@ function migrateNodes(nodes: AppNode[]): AppNode[] {
   return nodes.map((n) => {
     if (n.type !== "request-inputs") return n;
     const d = n.data as Record<string, unknown>;
-    if (Array.isArray(d.fields)) return n;
+    if (Array.isArray(d.fields) && d.fields.length > 0) return n;
     return {
       ...n,
       data: {

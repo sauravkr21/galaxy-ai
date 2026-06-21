@@ -50,8 +50,22 @@ export interface EngineHooks {
 function localOutputs(node: FlowNode): NodeOutputs {
   switch (node.type) {
     case "request-inputs": {
-      const d = node.data as RequestInputsData;
-      return Object.fromEntries((d.fields ?? []).map((f) => [f.id, f.value]));
+      const d = node.data as RequestInputsData & {
+        textField?: string | null;
+        imageUrl?: string | null;
+      };
+      const fieldOutputs = Object.fromEntries(
+        (d.fields ?? []).map((f) => [f.id, f.value]),
+      );
+      // Older saved workflows used fixed `textField` / `imageUrl` properties
+      // instead of the dynamic `fields` array. Keep execution backward
+      // compatible so Request-Inputs never silently emits `{}` for legacy
+      // sample workflows.
+      if (Object.keys(fieldOutputs).length > 0) return fieldOutputs;
+      return {
+        ...(d.textField !== undefined ? { text_field: d.textField } : {}),
+        ...(d.imageUrl !== undefined ? { image_field: d.imageUrl } : {}),
+      };
     }
     case "crop-image": {
       const d = node.data as CropImageData;

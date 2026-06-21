@@ -23,8 +23,6 @@ export function NodeShell({
   nodeId,
   title,
   subtitle,
-  icon,
-  accent,
   runState,
   selected,
   headerExtra,
@@ -72,22 +70,11 @@ export function NodeShell({
       )}
     >
       {/* Header */}
-      <div className="flex items-start gap-2 border-b border-hairline px-3 py-2.5">
-        <span
-          className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-white"
-          style={{ background: accent }}
-        >
-          {icon}
-        </span>
+      <div className="flex items-center gap-2 border-b border-hairline px-3 py-2.5">
         <div className="min-w-0 flex-1">
           <div className="truncate text-[13px] font-semibold leading-tight text-ink">
             {title}
           </div>
-          {subtitle && (
-            <div className="mt-0.5 line-clamp-2 text-[10.5px] leading-snug text-ink-faint">
-              {subtitle}
-            </div>
-          )}
         </div>
         {subtitle && (
           <div className="group/info relative flex">
