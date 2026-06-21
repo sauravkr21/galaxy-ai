@@ -143,12 +143,8 @@ export interface WorkflowSummary {
   thumbnailUrl: string | null;
 }
 
-export const GEMINI_MODELS = [
-  "gemini-3.1-pro",
-  "gemini-3.1-flash",
-  "gemini-2.5-pro",
-  "gemini-2.5-flash",
-] as const;
+// Only one model is offered in the node header, per spec.
+export const GEMINI_MODELS = ["gemini-3.1-pro"] as const;
 
 export type GeminiModel = (typeof GEMINI_MODELS)[number];
 
