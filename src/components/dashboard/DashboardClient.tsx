@@ -293,31 +293,7 @@ function WorkflowCard({
   return (
     <div className="group relative flex flex-col">
       <div onClick={onOpen} className="flex cursor-pointer flex-col text-left">
-        <Thumb src={item.thumbnailUrl}>
-          {/* Edit thumbnail control */}
-          <span
-            role="button"
-            onClick={(e) => { e.stopPropagation(); setThumbOpen((o) => !o); }}
-            className="group/edit absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-md bg-white/90 text-ink-muted opacity-0 shadow-sm transition-opacity hover:text-violet-600 group-hover:opacity-100"
-          >
-            <ImagePlus className="h-3.5 w-3.5" />
-            <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-hairline bg-white px-2 py-1 text-[10px] font-medium text-ink opacity-0 shadow-pop transition-opacity group-hover/edit:opacity-100">
-              Edit thumbnail
-            </span>
-          </span>
-          {thumbOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setThumbOpen(false); }} />
-              <div onClick={(e) => e.stopPropagation()} className="absolute left-2 top-11 z-20 animate-fade-in">
-                <UploadMenu
-                  accept="image/*"
-                  onSelect={(url) => onSetThumbnail(url)}
-                  onClose={() => setThumbOpen(false)}
-                />
-              </div>
-            </>
-          )}
-        </Thumb>
+        <Thumb src={item.thumbnailUrl} />
         <h3 className="mt-2 truncate text-[13px] font-medium text-ink">
           {item.name}
         </h3>
@@ -325,6 +301,31 @@ function WorkflowCard({
           Edited {formatDistanceToNow(new Date(item.updatedAt), { addSuffix: true })}
         </p>
       </div>
+
+      {/* Edit thumbnail control — kept outside Thumb so the popup is not
+          clipped by Thumb's overflow-hidden (it overflows below the card). */}
+      <span
+        role="button"
+        onClick={(e) => { e.stopPropagation(); setThumbOpen((o) => !o); }}
+        className="group/edit absolute left-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-md bg-white/90 text-ink-muted opacity-0 shadow-sm transition-opacity hover:text-violet-600 group-hover:opacity-100"
+      >
+        <ImagePlus className="h-3.5 w-3.5" />
+        <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-hairline bg-white px-2 py-1 text-[10px] font-medium text-ink opacity-0 shadow-pop transition-opacity group-hover/edit:opacity-100">
+          Edit thumbnail
+        </span>
+      </span>
+      {thumbOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setThumbOpen(false); }} />
+          <div onClick={(e) => e.stopPropagation()} className="absolute left-2 top-11 z-30 animate-fade-in">
+            <UploadMenu
+              accept="image/*"
+              onSelect={(url) => onSetThumbnail(url)}
+              onClose={() => setThumbOpen(false)}
+            />
+          </div>
+        </>
+      )}
       <div className="absolute right-1.5 top-1.5">
         <button
           onClick={() => setMenu((o) => !o)}
