@@ -17,15 +17,18 @@ import {
 import { useWorkflowStore } from "@/store/workflow-store";
 import { cn } from "@/lib/utils";
 
-/** Icon button with a dark tooltip above (matching the reference). */
+/** Icon button with a dark tooltip above (matching the reference). The
+ *  optional shortcut renders as a badge to the right of the label. */
 function ToolBtn({
   label,
+  shortcut,
   onClick,
   active,
   disabled,
   children,
 }: {
   label: string;
+  shortcut?: string;
   onClick?: () => void;
   active?: boolean;
   disabled?: boolean;
@@ -45,8 +48,13 @@ function ToolBtn({
       >
         {children}
       </button>
-      <span className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
-        {label}
+      <span className="pointer-events-none absolute bottom-full left-1/2 mb-2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+        <span>{label}</span>
+        {shortcut && (
+          <kbd className="rounded bg-white/15 px-1.5 py-0.5 font-medium text-white/80">
+            {shortcut}
+          </kbd>
+        )}
       </span>
     </div>
   );
@@ -90,10 +98,10 @@ export function CanvasToolbar({
 
       <Divider />
 
-      <ToolBtn label="Undo" onClick={undo} disabled={!canUndo}>
+      <ToolBtn label="Undo" shortcut="⌘Z" onClick={undo} disabled={!canUndo}>
         <Undo2 className="h-4 w-4" />
       </ToolBtn>
-      <ToolBtn label="Redo" onClick={redo} disabled={!canRedo}>
+      <ToolBtn label="Redo" shortcut="⌘Y" onClick={redo} disabled={!canRedo}>
         <Redo2 className="h-4 w-4" />
       </ToolBtn>
 
@@ -125,7 +133,7 @@ export function CanvasToolbar({
 
       <Divider />
 
-      <ToolBtn label="Zoom out" onClick={() => zoomOut()}>
+      <ToolBtn label="Zoom out" shortcut="−" onClick={() => zoomOut()}>
         <ZoomOut className="h-4 w-4" />
       </ToolBtn>
       <button
@@ -135,20 +143,21 @@ export function CanvasToolbar({
       >
         {Math.round((zoom ?? 1) * 100)}%
       </button>
-      <ToolBtn label="Zoom in" onClick={() => zoomIn()}>
+      <ToolBtn label="Zoom in" shortcut="+" onClick={() => zoomIn()}>
         <ZoomIn className="h-4 w-4" />
       </ToolBtn>
 
       <Divider />
 
-      <ToolBtn label="Fit view" onClick={() => fitView({ padding: 0.3, duration: 200 })}>
+      <ToolBtn label="Fit view" shortcut="F" onClick={() => fitView({ padding: 0.3, duration: 200 })}>
         <Maximize2 className="h-4 w-4" />
       </ToolBtn>
-      <ToolBtn label="Tidy layout" onClick={autoLayout}>
+      <ToolBtn label="Auto-arrange" shortcut="Shift+A" onClick={autoLayout}>
         <LayoutGrid className="h-4 w-4" />
       </ToolBtn>
       <ToolBtn
         label={selectMode ? "Select mode (on)" : "Select / move"}
+        shortcut="S"
         onClick={onToggleSelectMode}
         active={selectMode}
       >

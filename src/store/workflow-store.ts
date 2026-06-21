@@ -16,6 +16,8 @@ import {
   NodeData,
   NodeKind,
   NodeRunState,
+  RequestField,
+  RequestFieldType,
   RequestInputsData,
   WorkflowGraph,
 } from "@/types/flow";
@@ -63,6 +65,13 @@ interface WorkflowState {
   onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (conn: Connection) => void;
   isValidConnection: (conn: Connection | Edge) => boolean;
+  /** Create a matching field on the Request-Inputs node and wire it to the
+   *  given target input handle (the node "Add to request" buttons). */
+  addRequestInput: (
+    targetNodeId: string,
+    targetHandle: string,
+    fieldType: RequestFieldType,
+  ) => void;
   addNode: (kind: NodeKind, position: { x: number; y: number }) => void;
   updateNodeData: (id: string, patch: Partial<NodeData>) => void;
   deleteNode: (id: string) => void;
@@ -202,6 +211,55 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         },
         s.edges,
       ),
+      dirty: true,
+    }));
+  },
+
+  addRequestInput: (targetNodeId, targetHandle, fieldType) => {
+    const { nodes, edges } = get();
+    const reqNode = nodes.find((n) => n.type === "request-inputs");
+    if (!reqNode) return;
+    // Already wired — nothing to do.
+    if (
+      edges.some(
+        (e) => e.target === targetNodeId && e.targetHandle === targetHandle,
+      )
+    )
+      return;
+
+    get().pushHistory();
+    const reqData = reqNode.data as RequestInputsData;
+    const fields = reqData.fields ?? [];
+    const base = `${fieldType}_field`;
+    const count = fields.filter((f) => f.name.startsWith(base)).length;
+    const name = count === 0 ? base : `${base}_${count + 1}`;
+    const field: RequestField = {
+      id: `f_${nanoid(6)}`,
+      name,
+      type: fieldType,
+      value:
+        fieldType === "boolean"
+          ? "false"
+          : fieldType === "text" || fieldType === "number"
+            ? ""
+            : null,
+    };
+    const edge: AppEdge = {
+      id: `e-${nanoid(8)}`,
+      source: reqNode.id,
+      sourceHandle: field.id,
+      target: targetNodeId,
+      targetHandle,
+      type: "data",
+      animated: true,
+    };
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === reqNode.id
+          ? { ...n, data: { ...n.data, fields: [...fields, field] } }
+          : n,
+      ),
+      edges: [...s.edges, edge],
       dirty: true,
     }));
   },

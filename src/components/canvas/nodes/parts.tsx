@@ -3,7 +3,7 @@
 import { Handle, Position } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import type { NodeRunState, PortType } from "@/types/flow";
-import { Loader2, Check, AlertCircle } from "lucide-react";
+import { Loader2, Check, AlertCircle, Plus, Info } from "lucide-react";
 
 // Handle colors matched to the reference: text=orange, image=blue, video=green,
 // audio=cyan, file=purple, any (e.g. crop X/Y/W/H)=pink.
@@ -16,6 +16,24 @@ const PORT_COLORS: Record<PortType, string> = {
   any: "#ec4899",
 };
 
+/** Small info icon that reveals helper text on hover. */
+export function InfoTip({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}) {
+  return (
+    <span className={cn("group/tip relative inline-flex", className)}>
+      <Info className="h-3 w-3 cursor-help text-ink-faint" />
+      <span className="pointer-events-none absolute left-1/2 top-[calc(100%+4px)] z-50 w-max max-w-[200px] -translate-x-1/2 rounded-md border border-hairline bg-white px-2 py-1 text-[10px] font-normal leading-snug text-ink-muted opacity-0 shadow-pop transition-opacity duration-100 group-hover/tip:opacity-100">
+        {text}
+      </span>
+    </span>
+  );
+}
+
 /** A typed connection handle with a label sitting beside it. */
 export function Port({
   id,
@@ -23,12 +41,21 @@ export function Port({
   type,
   side,
   connected,
+  required,
+  info,
+  strong,
 }: {
   id: string;
   label: string;
   type: PortType;
   side: "left" | "right";
   connected?: boolean;
+  /** Renders a red required asterisk after the label. */
+  required?: boolean;
+  /** Adds an info icon after the label with this hover text. */
+  info?: string;
+  /** Use the strong (dark) label colour instead of muted. */
+  strong?: boolean;
 }) {
   const color = PORT_COLORS[type];
   return (
@@ -47,12 +74,38 @@ export function Port({
       />
       <span
         className={cn(
-          "text-[11px] font-medium",
-          connected ? "text-violet-600" : "text-ink-muted",
+          "flex items-center text-[11px] font-medium",
+          connected ? "text-violet-600" : strong ? "text-ink" : "text-ink-muted",
         )}
       >
-        {label}
-        {connected && " · connected"}
+        <span>{label}</span>
+        {required && <span className="text-red-500">*</span>}
+        {info && (
+          <span className="ml-1">
+            <InfoTip text={info} />
+          </span>
+        )}
+        {connected && <span className="ml-1">· connected</span>}
+      </span>
+    </div>
+  );
+}
+
+/** Small "+" control that wires an input to the Request-Inputs node.
+ *  Shows an "Add to request" tooltip on hover. */
+export function AddToRequestButton({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="group/atr relative shrink-0">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label="Add to request"
+        className="nodrag flex h-8 w-8 items-center justify-center rounded-lg border border-hairline text-ink-muted transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600"
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+      <span className="pointer-events-none absolute right-0 top-[calc(100%+4px)] z-50 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-pop transition-opacity duration-100 group-hover/atr:opacity-100">
+        Add to request
       </span>
     </div>
   );

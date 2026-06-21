@@ -10,19 +10,20 @@ import {
   useReactFlow,
   type OnSelectionChangeParams,
 } from "@xyflow/react";
-import { Map as MapIcon } from "lucide-react";
+import { Map as MapIcon, Minimize2 } from "lucide-react";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { nodeTypes, edgeTypes } from "./registry";
 import { CanvasToolbar } from "./CanvasToolbar";
 import { AddStickyBar } from "./AddStickyBar";
-import { cn } from "@/lib/utils";
 import type { NodeKind } from "@/types/flow";
 
+// Tuned for the dark minimap background — dark node accents are lightened so
+// they stay visible against #1c1c22.
 const MINIMAP_COLOR: Record<NodeKind, string> = {
-  "request-inputs": "#1a1a23",
+  "request-inputs": "#71717a",
   "crop-image": "#0ea5e9",
   gemini: "#7c5cff",
-  response: "#6a45f0",
+  response: "#8b6dff",
   sticky: "#f5a623",
 };
 
@@ -39,10 +40,11 @@ export function FlowCanvas() {
   const undo = useWorkflowStore((s) => s.undo);
   const redo = useWorkflowStore((s) => s.redo);
   const addNode = useWorkflowStore((s) => s.addNode);
+  const autoLayout = useWorkflowStore((s) => s.autoLayout);
 
   const [selectMode, setSelectMode] = useState(false);
   const [showMinimap, setShowMinimap] = useState(false);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView, zoomIn, zoomOut } = useReactFlow();
 
   const onSelectionChange = useCallback(
     (params: OnSelectionChangeParams) =>
@@ -50,7 +52,7 @@ export function FlowCanvas() {
     [setSelected],
   );
 
-  // Keyboard: delete (undoable), undo/redo.
+  // Keyboard shortcuts (mirrors the toolbar tooltips).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -61,21 +63,41 @@ export function FlowCanvas() {
         target.isContentEditable;
       if (typing) return;
 
-      if ((e.key === "Delete" || e.key === "Backspace") && !typing) {
+      const mod = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+
+      if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         deleteSelected();
-      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+      } else if (mod && key === "z") {
         e.preventDefault();
         if (e.shiftKey) redo();
         else undo();
-      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y") {
+      } else if (mod && key === "y") {
         e.preventDefault();
         redo();
+      } else if (mod) {
+        return; // leave other modifier combos to the browser
+      } else if (e.shiftKey && key === "a") {
+        e.preventDefault();
+        autoLayout();
+      } else if (key === "f") {
+        e.preventDefault();
+        fitView({ padding: 0.3, duration: 200 });
+      } else if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        zoomIn();
+      } else if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        zoomOut();
+      } else if (key === "s") {
+        e.preventDefault();
+        setSelectMode((m) => !m);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [deleteSelected, undo, redo]);
+  }, [deleteSelected, undo, redo, autoLayout, fitView, zoomIn, zoomOut]);
 
   const handleAdd = useCallback(
     (kind: NodeKind) => {
@@ -112,30 +134,40 @@ export function FlowCanvas() {
       proOptions={{ hideAttribution: true }}
       className="bg-canvas"
     >
-      <Background variant={BackgroundVariant.Dots} gap={22} size={1.4} color="#d7d7e0" />
+      <Background variant={BackgroundVariant.Dots} gap={22} size={1.8} color="#a8a8ba" />
 
-      {/* Minimap is collapsed by default into a map-icon toggle (matches the
-          reference); clicking the button reveals the minimap above it. */}
-      {showMinimap && (
-        <MiniMap
-          pannable
-          zoomable
-          nodeColor={(n) => MINIMAP_COLOR[n.type as NodeKind] ?? "#9a9aa7"}
-          maskColor="rgba(247,247,250,0.7)"
-          className="!bottom-16 !right-4"
-        />
-      )}
+      {/* Minimap collapses to a map-icon button. Expanded, it shows a dark
+          minimap with a "hide minimap" control at its top-right corner. */}
       <Panel position="bottom-right">
-        <button
-          onClick={() => setShowMinimap((v) => !v)}
-          title={showMinimap ? "Hide minimap" : "Show minimap"}
-          className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-lg border border-hairline bg-white/95 shadow-pop backdrop-blur transition-colors hover:bg-ink/[0.03]",
-            showMinimap ? "text-violet-600" : "text-ink-muted",
-          )}
-        >
-          <MapIcon className="h-4 w-4" />
-        </button>
+        {showMinimap ? (
+          <div className="relative">
+            <MiniMap
+              pannable
+              zoomable
+              nodeColor={(n) => MINIMAP_COLOR[n.type as NodeKind] ?? "#9a9aa7"}
+              nodeStrokeColor="transparent"
+              bgColor="#1c1c22"
+              maskColor="rgba(0,0,0,0.4)"
+              style={{ width: 208, height: 156, margin: 0 }}
+              className="!static !m-0 overflow-hidden !rounded-xl !border-transparent"
+            />
+            <button
+              onClick={() => setShowMinimap(false)}
+              title="Hide minimap"
+              className="absolute -right-2.5 -top-2.5 flex h-7 w-7 items-center justify-center rounded-lg border border-hairline bg-white text-ink-muted shadow-pop transition-colors hover:bg-ink/[0.03] hover:text-violet-600"
+            >
+              <Minimize2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowMinimap(true)}
+            title="Show minimap"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-hairline bg-white/95 text-ink-muted shadow-pop backdrop-blur transition-colors hover:bg-ink/[0.03]"
+          >
+            <MapIcon className="h-4 w-4" />
+          </button>
+        )}
       </Panel>
 
       <Panel position="bottom-left">

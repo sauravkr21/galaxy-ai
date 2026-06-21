@@ -18,12 +18,15 @@ export function MediaUpload({
   label = "Upload image",
   accept = "image/*",
   disabled,
+  addButton,
 }: {
   value: string | null;
   onChange: (url: string | null) => void;
   label?: string;
   accept?: string;
   disabled?: boolean;
+  /** Replaces the default "add media" plus (e.g. an "Add to request" control). */
+  addButton?: React.ReactNode;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -106,18 +109,20 @@ export function MediaUpload({
             </>
           )}
         </button>
-        <button
-          disabled={disabled || busy}
-          onClick={() => {
-            setOpen((current) => !current);
-            setSelectingAsset(false);
-            setError(null);
-          }}
-          title="Add media"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-hairline text-ink-muted hover:bg-ink/[0.03] hover:text-violet-600"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        {addButton ?? (
+          <button
+            disabled={disabled || busy}
+            onClick={() => {
+              setOpen((current) => !current);
+              setSelectingAsset(false);
+              setError(null);
+            }}
+            title="Add media"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-hairline text-ink-muted hover:bg-ink/[0.03] hover:text-violet-600"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {open && (

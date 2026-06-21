@@ -9,8 +9,9 @@ import {
   useWorkflowStore,
 } from "@/store/workflow-store";
 import { NodeShell } from "./NodeShell";
-import { FieldLabel, Port } from "./parts";
+import { AddToRequestButton, FieldLabel, InfoTip, Port } from "./parts";
 import { MediaUpload } from "../MediaUpload";
+import { ExpandableTextarea } from "../ExpandableTextarea";
 import { cn } from "@/lib/utils";
 
 function ConnectedBox({ children }: { children: React.ReactNode }) {
@@ -22,15 +23,16 @@ function ConnectedBox({ children }: { children: React.ReactNode }) {
 }
 
 const VISION_PORTS = [
-  { id: "image", label: "Image (Vision)", uploadLabel: "Upload Image", type: "image" as const, accept: "image/*", hint: "Supported: jpg, png, webp, gif" },
-  { id: "video", label: "Video", uploadLabel: "Upload Video", type: "video" as const, accept: "video/*", hint: undefined },
-  { id: "audio", label: "Audio", uploadLabel: "Upload Audio", type: "audio" as const, accept: "audio/*", hint: undefined },
-  { id: "file", label: "File", uploadLabel: "Upload File", type: "file" as const, accept: "*/*", hint: undefined },
+  { id: "image", label: "Image (Vision)", uploadLabel: "Upload Image", type: "image" as const, accept: "image/*", requirements: "Max images: 10" },
+  { id: "video", label: "Video", uploadLabel: "Upload Video", type: "video" as const, accept: "video/*", requirements: undefined },
+  { id: "audio", label: "Audio", uploadLabel: "Upload Audio", type: "audio" as const, accept: "audio/*", requirements: undefined },
+  { id: "file", label: "File", uploadLabel: "Upload File", type: "file" as const, accept: "*/*", requirements: undefined },
 ];
 
 export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) {
   const update = useWorkflowStore((s) => s.updateNodeData);
   const edges = useWorkflowStore((s) => s.edges);
+  const addRequestInput = useWorkflowStore((s) => s.addRequestInput);
   const connected = connectedTargetHandles(edges, id);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -43,6 +45,7 @@ export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) 
       nodeId={id}
       title="Gemini 3.1 Pro"
       icon={<Sparkles className="h-3.5 w-3.5" />}
+      subtitle="Generate text using Gemini 3.1 pro (Google)"
       accent="#7c5cff"
       runState={data.runState}
       selected={selected}
@@ -52,16 +55,31 @@ export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) 
     >
       {/* Prompt (required) */}
       <div>
-        <Port id="prompt" label="Prompt" type="text" side="left" connected={connected.has("prompt")} />
+        <div className="flex items-center justify-between gap-2">
+          <Port
+            id="prompt"
+            label="Prompt"
+            type="text"
+            side="left"
+            strong
+            required
+            info="The main instruction sent to Gemini. (placeholder text — edit later)"
+            connected={connected.has("prompt")}
+          />
+          {!connected.has("prompt") && (
+            <AddToRequestButton onClick={() => addRequestInput(id, "prompt", "text")} />
+          )}
+        </div>
         <div className="mt-1">
           {connected.has("prompt") ? (
             <ConnectedBox>Prompt provided by upstream connection</ConnectedBox>
           ) : (
-            <textarea
-              className="nodrag h-16 w-full resize-none rounded-lg border border-hairline p-2 text-[12px] outline-none focus:border-violet-400"
+            <ExpandableTextarea
+              title="Prompt"
+              className="h-16"
               placeholder="Enter your prompt…"
               value={data.prompt}
-              onChange={(e) => update(id, { prompt: e.target.value })}
+              onChange={(v) => update(id, { prompt: v })}
             />
           )}
         </div>
@@ -69,16 +87,30 @@ export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) 
 
       {/* System prompt */}
       <div>
-        <Port id="system_prompt" label="System Prompt" type="text" side="left" connected={connected.has("system_prompt")} />
+        <div className="flex items-center justify-between gap-2">
+          <Port
+            id="system_prompt"
+            label="System Prompt"
+            type="text"
+            side="left"
+            strong
+            info="Sets the model's persona and behaviour. (placeholder text — edit later)"
+            connected={connected.has("system_prompt")}
+          />
+          {!connected.has("system_prompt") && (
+            <AddToRequestButton onClick={() => addRequestInput(id, "system_prompt", "text")} />
+          )}
+        </div>
         <div className="mt-1">
           {connected.has("system_prompt") ? (
             <ConnectedBox>System prompt provided by upstream connection</ConnectedBox>
           ) : (
-            <textarea
-              className="nodrag h-14 w-full resize-none rounded-lg border border-hairline p-2 text-[12px] outline-none focus:border-violet-400"
+            <ExpandableTextarea
+              title="System Prompt"
+              className="h-14"
               placeholder="Optional system instruction…"
               value={data.systemPrompt}
-              onChange={(e) => update(id, { systemPrompt: e.target.value })}
+              onChange={(v) => update(id, { systemPrompt: v })}
             />
           )}
         </div>
@@ -91,7 +123,7 @@ export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) 
           const manual = data.vision[p.id as keyof typeof data.vision];
           return (
             <div key={p.id}>
-              <Port id={p.id} label={p.label} type={p.type} side="left" connected={isConnected} />
+              <Port id={p.id} label={p.label} type={p.type} side="left" strong connected={isConnected} />
               <div className="mt-1">
                 {isConnected ? (
                   <ConnectedBox>Connected from upstream</ConnectedBox>
@@ -105,10 +137,17 @@ export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) 
                         vision: { ...data.vision, [p.id]: url },
                       })
                     }
+                    addButton={
+                      <AddToRequestButton
+                        onClick={() => addRequestInput(id, p.id, p.type)}
+                      />
+                    }
                   />
                 )}
-                {!isConnected && p.hint && (
-                  <p className="mt-1 text-[10px] text-ink-faint">{p.hint}</p>
+                {!isConnected && !manual && p.requirements && (
+                  <div className="mt-1 flex items-center justify-center gap-1 text-[10px] text-ink-faint">
+                    <InfoTip text={p.requirements} /> Upload requirements
+                  </div>
                 )}
               </div>
             </div>
@@ -174,7 +213,7 @@ export function GeminiNode({ id, data, selected }: NodeProps<Node<GeminiData>>) 
       {/* Response output */}
       <div>
         <div className="flex items-center justify-end">
-          <Port id="response" label="Response" type="text" side="right" />
+          <Port id="response" label="Response" type="text" side="right" strong />
         </div>
         <div
           className={cn(
