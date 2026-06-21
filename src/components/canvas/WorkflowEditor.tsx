@@ -62,7 +62,7 @@ export function WorkflowEditor({
 
   return (
     <ReactFlowProvider>
-      <div className="relative flex h-screen w-screen overflow-hidden">
+      <div className="relative flex h-full w-full overflow-hidden">
         <div className="relative flex-1">
           <Topbar
             workflowId={workflowId}
