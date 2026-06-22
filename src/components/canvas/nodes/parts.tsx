@@ -7,7 +7,7 @@ import { Loader2, Check, AlertCircle, Plus, Info } from "lucide-react";
 
 // Handle colors matched to the reference: text=orange, image=blue, video=green,
 // audio=cyan, file=purple, any (e.g. crop X/Y/W/H)=pink.
-const PORT_COLORS: Record<PortType, string> = {
+export const PORT_COLORS: Record<PortType, string> = {
   text: "#f59e0b",
   image: "#3b82f6",
   video: "#22c55e",
