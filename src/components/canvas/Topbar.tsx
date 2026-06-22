@@ -28,13 +28,27 @@ export function Topbar({
   const name = useWorkflowStore((s) => s.name);
   const setName = useWorkflowStore((s) => s.setName);
   const isRunning = useWorkflowStore((s) => s.isRunning);
+  const selectedNodeIds = useWorkflowStore((s) => s.selectedNodeIds);
   const { run } = useRunController(workflowId);
   const [error, setError] = useState<string | null>(null);
+
+  // Selectable (executable) nodes that are currently selected — sticky notes
+  // are never executed.
+  const nodes = useWorkflowStore((s) => s.nodes);
+  const selectedRunnable = selectedNodeIds.filter((id) => {
+    const n = nodes.find((x) => x.id === id);
+    return n && n.type !== "sticky";
+  });
 
   async function handleRun() {
     setError(null);
     try {
-      await run("full", []);
+      // Multi-select run when 2+ nodes are selected, otherwise a full run.
+      if (selectedRunnable.length >= 2) {
+        await run("multi", selectedRunnable);
+      } else {
+        await run("full", []);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Run failed");
     }
@@ -66,13 +80,22 @@ export function Topbar({
         <button
           onClick={handleRun}
           disabled={isRunning}
-          title={isRunning ? "Workflow is running" : "Run workflow"}
-          className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500 text-white shadow-node transition-colors hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-70"
+          title={
+            isRunning
+              ? "Workflow is running"
+              : selectedRunnable.length >= 2
+                ? `Run ${selectedRunnable.length} selected nodes`
+                : "Run workflow (full)"
+          }
+          className="flex h-9 items-center justify-center gap-1.5 rounded-lg bg-indigo-500 px-2.5 text-white shadow-node transition-colors hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isRunning ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Play className="h-4 w-4 fill-current" />
+          )}
+          {!isRunning && selectedRunnable.length >= 2 && (
+            <span className="text-[12px] font-medium">Run {selectedRunnable.length}</span>
           )}
         </button>
 
