@@ -53,6 +53,10 @@ interface WorkflowState {
   // run lifecycle
   isRunning: boolean;
   currentRunId: string | null;
+  /** Trigger.dev orchestrator run id + scoped public token, set when a run is
+   *  dispatched so the canvas can subscribe to it via Trigger Realtime. */
+  realtimeRunId: string | null;
+  realtimeToken: string | null;
   /** Bumped whenever a run finishes so the history panel refetches. */
   historyVersion: number;
   /** Registered by the editor so nodes can trigger their own (single) run. */
@@ -92,6 +96,7 @@ interface WorkflowState {
   applyNodeOutput: (id: string, patch: Partial<NodeData>) => void;
 
   setRunning: (running: boolean, runId?: string | null) => void;
+  setRealtime: (runId: string | null, token: string | null) => void;
   bumpHistory: () => void;
   setRunFn: (
     fn: ((mode: "full" | "single" | "multi", nodeIds: string[]) => void) | null,
@@ -147,6 +152,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   future: [],
   isRunning: false,
   currentRunId: null,
+  realtimeRunId: null,
+  realtimeToken: null,
   historyVersion: 0,
   runFn: null,
 
@@ -162,6 +169,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       selectedNodeIds: [],
       isRunning: false,
       currentRunId: null,
+      realtimeRunId: null,
+      realtimeToken: null,
     }),
 
   setName: (name) => set({ name, dirty: true }),
@@ -480,6 +489,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   setRunning: (running, runId) =>
     set({ isRunning: running, currentRunId: runId ?? null }),
+
+  setRealtime: (runId, token) =>
+    set({ realtimeRunId: runId, realtimeToken: token }),
 
   bumpHistory: () => set((s) => ({ historyVersion: s.historyVersion + 1 })),
 

@@ -56,7 +56,6 @@ export function HistoryPanel({
   onClose: () => void;
 }) {
   const historyVersion = useWorkflowStore((s) => s.historyVersion);
-  const isRunning = useWorkflowStore((s) => s.isRunning);
   const [runs, setRuns] = useState<RunDto[]>([]);
   const [openRun, setOpenRun] = useState<string | null>(null);
   const [tab, setTab] = useState<"ai" | "api">("ai");
@@ -71,16 +70,12 @@ export function HistoryPanel({
     }
   }, [workflowId, openRun]);
 
+  // Reload whenever `historyVersion` is bumped. During a run that bump is
+  // driven by Trigger Realtime events (see RealtimeRunBridge), so live progress
+  // shows up without any interval polling.
   useEffect(() => {
     load();
   }, [load, historyVersion]);
-
-  // While a run is active, refresh the history every couple seconds.
-  useEffect(() => {
-    if (!isRunning) return;
-    const t = setInterval(load, 1500);
-    return () => clearInterval(t);
-  }, [isRunning, load]);
 
   return (
     <aside className="flex h-full w-[360px] shrink-0 flex-col border-l border-hairline bg-white">

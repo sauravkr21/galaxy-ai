@@ -3,8 +3,8 @@
 A focused, pixel-faithful clone of the [Galaxy.ai](https://try.galaxy.ai/clone)
 workflow builder, scoped to **LLM workflows**. Build visual DAGs on a React Flow
 canvas, execute every node through **Trigger.dev**, run LLM steps on **Google
-Gemini** (multimodal), and watch a live pulsating glow as independent branches
-run concurrently.
+Gemini** (multimodal), and watch a live pulsating glow — pushed over
+**Trigger.dev Realtime** — as independent branches run concurrently.
 
 > Three surfaces only: **Clerk auth**, **Dashboard**, **Workflow canvas**.
 > No marketing pages — unauthenticated traffic is redirected to sign-in.
@@ -68,13 +68,32 @@ Every executable node runs as a Trigger.dev task and logs exactly one line:
 
 (set via `CANDIDATE_LINKEDIN_URL`).
 
+### Realtime updates (no polling)
+
+Execution progress is **fully event-driven** — there is no interval polling
+anywhere on the client or in the orchestrator:
+
+- The orchestrator (`execute-workflow` task) awaits each child crop/gemini task
+  with **`runs.subscribeToRun`** (Trigger Realtime), never `runs.poll` and never
+  `triggerAndWait` — so sibling nodes still run concurrently (a subscription is
+  not a waitpoint).
+- As nodes start/finish, the orchestrator writes per-node status to the run's
+  **`metadata`** (`metadata.nodes[nodeId]`, `metadata.status`).
+- `POST /api/workflows/:id/runs` returns the orchestrator run id plus a scoped
+  **public access token**.
+- The canvas mounts `RealtimeRunBridge`, which subscribes via
+  **`useRealtimeRun`** (`@trigger.dev/react-hooks`) and translates streamed
+  metadata into the live node glow, a one-shot output refresh on completion, and
+  history-panel refreshes — all from server-pushed events.
+
 ### Local executor
 
 For local demos without a Trigger.dev cloud project, set `LOCAL_EXECUTOR=1`.
 Runs then execute in-process using the **same engine** (real 30s crop delay,
-real Gemini calls), and the canvas polls `/api/runs/:id` to drive the glow.
+real Gemini calls). This dev fallback has no Trigger run to subscribe to, so the
+canvas reflects final state once the run settles rather than streaming live.
 In production, leave it unset and set `TRIGGER_PROJECT_REF` so all executions go
-through Trigger.dev.
+through Trigger.dev with full Realtime updates.
 
 ---
 

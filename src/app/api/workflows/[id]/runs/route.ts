@@ -88,17 +88,29 @@ export async function POST(
 
     // Dispatch execution.
     if (isLocalExecutor()) {
-      // Fire-and-forget in-process (works under `next dev` / a long-lived node
-      // server). The client polls GET /api/runs/:runId for progress.
+      // Fire-and-forget in-process dev fallback (no Trigger.dev configured).
+      // There is no Realtime run to subscribe to in this mode.
       void executeRun(run.id, "local").catch((e) =>
         console.error("[run] local execution failed", e),
       );
-    } else {
-      const { executeWorkflowTask } = await import("@/trigger/execute-workflow");
-      await executeWorkflowTask.trigger({ runId: run.id });
+      return json({ runId: run.id, mode: body.mode }, { status: 201 });
     }
 
-    return json({ runId: run.id, mode: body.mode }, { status: 201 });
+    // Trigger.dev path: kick off the orchestrator and hand the client a public
+    // access token scoped to this run so it can subscribe via Trigger Realtime
+    // (useRealtimeRun) — driving the live node glow + history with zero polling.
+    const { executeWorkflowTask } = await import("@/trigger/execute-workflow");
+    const handle = await executeWorkflowTask.trigger({ runId: run.id });
+
+    return json(
+      {
+        runId: run.id,
+        mode: body.mode,
+        triggerRunId: handle.id,
+        publicAccessToken: handle.publicAccessToken,
+      },
+      { status: 201 },
+    );
   } catch (err) {
     return handleError(err);
   }

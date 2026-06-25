@@ -7,6 +7,7 @@ import { useRunController } from "@/hooks/useRunController";
 import { api } from "@/lib/client-api";
 import { FlowCanvas } from "./FlowCanvas";
 import { Topbar } from "./Topbar";
+import { RealtimeRunBridge } from "./RealtimeRunBridge";
 import { HistoryPanel } from "@/components/history/HistoryPanel";
 import type { WorkflowGraph } from "@/types/flow";
 
@@ -25,7 +26,7 @@ export function WorkflowEditor({
   const setRunFn = useWorkflowStore((s) => s.setRunFn);
   const [historyOpen, setHistoryOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { run } = useRunController(workflowId);
+  const { run, refreshOutputs } = useRunController(workflowId);
 
   // Load the workflow into the store once on mount.
   useEffect(() => {
@@ -62,6 +63,8 @@ export function WorkflowEditor({
 
   return (
     <ReactFlowProvider>
+      {/* Event-driven bridge: Trigger Realtime → live node glow + history. */}
+      <RealtimeRunBridge refreshOutputs={refreshOutputs} />
       <div className="relative flex h-full w-full overflow-hidden">
         <div className="relative flex-1">
           <Topbar

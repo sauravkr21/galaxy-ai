@@ -1,41 +1,15 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { api } from "@/lib/client-api";
 import { validateGraph } from "@/lib/dag";
-import type { NodeRunState, WorkflowGraph } from "@/types/flow";
+import type { WorkflowGraph } from "@/types/flow";
 
 type RunMode = "full" | "single" | "multi";
 
-const STATUS_TO_STATE: Record<string, NodeRunState> = {
-  PENDING: "queued",
-  RUNNING: "running",
-  COMPLETED: "completed",
-  FAILED: "failed",
-  SKIPPED: "idle",
-};
-
-interface NodeRunDto {
-  nodeId: string;
-  status: string;
-}
-interface RunDto {
-  id: string;
-  status: string;
-  nodeRuns: NodeRunDto[];
-}
-
 export function useRunController(workflowId: string) {
   const store = useWorkflowStore;
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-  }, []);
 
   /** Persist the current canvas to the backend. */
   const save = useCallback(async () => {
@@ -44,7 +18,9 @@ export function useRunController(workflowId: string) {
     s.markClean();
   }, [store, workflowId]);
 
-  /** Pull the persisted graph and merge node outputs back onto the canvas. */
+  /** Pull the persisted graph and merge node outputs back onto the canvas.
+   *  Called once when a run completes (driven by the Realtime subscription,
+   *  not by polling). */
   const refreshOutputs = useCallback(async () => {
     const { graph } = await api.getWorkflow(workflowId);
     const s = store.getState();
@@ -79,36 +55,25 @@ export function useRunController(workflowId: string) {
         mode === "full" ? graph.nodes.map((n) => n.id) : targetNodeIds;
       s.setManyRunState(targets, "queued");
 
-      const { runId } = await api.startRun(workflowId, {
-        mode,
-        targetNodeIds,
-        graph,
-      });
+      const { runId, triggerRunId, publicAccessToken } = await api.startRun(
+        workflowId,
+        { mode, targetNodeIds, graph },
+      );
       s.setRunning(true, runId);
 
-      // Poll for per-node status to animate the glow in near real-time.
-      stopPolling();
-      pollRef.current = setInterval(async () => {
-        try {
-          const runDto: RunDto = await api.getRun(runId);
-          for (const nr of runDto.nodeRuns) {
-            const state = STATUS_TO_STATE[nr.status] ?? "idle";
-            store.getState().setNodeRunState(nr.nodeId, state);
-          }
-          if (["COMPLETED", "FAILED", "CANCELLED"].includes(runDto.status)) {
-            stopPolling();
-            await refreshOutputs();
-            const st = store.getState();
-            st.setRunning(false, null);
-            st.bumpHistory();
-          }
-        } catch {
-          // transient — keep polling
-        }
-      }, 700);
+      // Hand the Trigger.dev run id + scoped token to the store. The
+      // RealtimeRunBridge subscribes to it and drives per-node glow, output
+      // refresh, and history updates entirely from server-pushed events.
+      if (triggerRunId && publicAccessToken) {
+        s.setRealtime(triggerRunId, publicAccessToken);
+      } else {
+        // No Trigger.dev run (local dev fallback): nothing to subscribe to, so
+        // surface whatever the in-process run persisted once it settles.
+        s.setRealtime(null, null);
+      }
     },
-    [store, workflowId, stopPolling, refreshOutputs],
+    [store, workflowId],
   );
 
-  return { run, save, stopPolling };
+  return { run, save, refreshOutputs };
 }

@@ -42,7 +42,13 @@ export const api = {
   startRun: (
     id: string,
     body: { mode: "full" | "single" | "multi"; targetNodeIds: string[]; graph: WorkflowGraph },
-  ): Promise<{ runId: string }> =>
+  ): Promise<{
+    runId: string;
+    mode: string;
+    // Present only on the Trigger.dev path — used to subscribe via Realtime.
+    triggerRunId?: string;
+    publicAccessToken?: string;
+  }> =>
     fetch(`/api/workflows/${id}/runs`, {
       method: "POST",
       headers: { "content-type": "application/json" },

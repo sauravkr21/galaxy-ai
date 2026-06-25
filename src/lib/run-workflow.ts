@@ -1,3 +1,4 @@
+import { metadata } from "@trigger.dev/sdk";
 import { prisma } from "@/lib/prisma";
 import {
   cropInputsFrom,
@@ -10,9 +11,51 @@ import { selectionToRunSet } from "@/lib/dag";
 import { runGemini } from "@/lib/gemini";
 import { cropWithFfmpeg } from "@/lib/image-crop";
 import { CANDIDATE_LINKEDIN } from "@/lib/branding";
-import type { FlowNode, WorkflowGraph } from "@/types/flow";
+import type { FlowNode, NodeRunState, WorkflowGraph } from "@/types/flow";
 
 export type ExecutorMode = "local" | "trigger";
+
+/** Shape of the per-node progress we stream over Trigger.dev Realtime metadata.
+ *  The canvas reads `metadata.nodes[nodeId]` to drive the live glow, and
+ *  `metadata.status` for the overall run badge — no DB polling required. */
+export interface RunMetadata {
+  status: "RUNNING" | "COMPLETED" | "FAILED";
+  nodes: Record<string, NodeRunState>;
+}
+
+/**
+ * Publishes per-node + overall run progress onto the orchestrator run's
+ * metadata so any Realtime subscriber (the canvas) is pushed live updates.
+ * A no-op in local mode, where there is no Trigger.dev run context.
+ */
+function makeProgressPublisher(mode: ExecutorMode) {
+  const nodes: Record<string, NodeRunState> = {};
+  const enabled = mode === "trigger";
+
+  const flush = async () => {
+    if (!enabled) return;
+    metadata.set("nodes", { ...nodes });
+    // Force a flush so the glow updates immediately rather than on the SDK's
+    // periodic (~1s) auto-flush.
+    await metadata.flush();
+  };
+
+  return {
+    async setNode(nodeId: string, state: NodeRunState) {
+      nodes[nodeId] = state;
+      await flush();
+    },
+    async setMany(ids: string[], state: NodeRunState) {
+      for (const id of ids) nodes[id] = state;
+      await flush();
+    },
+    async setStatus(status: RunMetadata["status"]) {
+      if (!enabled) return;
+      metadata.set("status", status);
+      await metadata.flush();
+    },
+  };
+}
 
 const attribution = `[NextFlow] Candidate LinkedIn: ${CANDIDATE_LINKEDIN}`;
 
@@ -58,6 +101,17 @@ function localExecutor(): NodeExecutor {
   };
 }
 
+/** Terminal Trigger.dev run statuses that are *not* a successful completion. */
+const FAILED_RUN_STATUSES = new Set([
+  "FAILED",
+  "CANCELED",
+  "CRASHED",
+  "SYSTEM_FAILURE",
+  "INTERRUPTED",
+  "TIMED_OUT",
+  "EXPIRED",
+]);
+
 /** Trigger.dev executor — every executable node runs as a child task.
  *  Only valid inside a Trigger.dev run context (see executeWorkflowTask). */
 function triggerExecutor(runId: string): NodeExecutor {
@@ -67,19 +121,29 @@ function triggerExecutor(runId: string): NodeExecutor {
     const { geminiTask } = await import("@/trigger/gemini");
     const { runs } = await import("@trigger.dev/sdk");
 
-    // IMPORTANT: use `trigger` + `runs.poll` (client-side HTTP polling), NOT
-    // `triggerAndWait`. The engine runs sibling nodes concurrently, and
-    // Trigger.dev forbids parallel waitpoints ("Parallel waits are not
-    // supported … Promise.all() around our wait functions"). Polling is not a
-    // waitpoint, so concurrent children work and DAG concurrency is preserved.
+    // IMPORTANT: use `trigger` + `runs.subscribeToRun` (Trigger.dev Realtime),
+    // NOT `triggerAndWait` and NOT `runs.poll`. The engine runs sibling nodes
+    // concurrently, and Trigger.dev forbids parallel waitpoints ("Parallel
+    // waits are not supported … Promise.all() around our wait functions"). A
+    // Realtime subscription is not a waitpoint, so concurrent children work and
+    // DAG concurrency is preserved — while child completion is delivered as a
+    // server-pushed event (Electric/SSE) instead of interval HTTP polling.
     async function awaitChild<T>(handle: { id: string }): Promise<T> {
-      const result = await runs.poll(handle.id, { pollIntervalMs: 2000 });
-      if (result.status !== "COMPLETED") {
-        throw new Error(
-          `${result.taskIdentifier} ${result.status}: ${result.error?.message ?? "no output"}`,
-        );
+      for await (const childRun of runs.subscribeToRun(handle.id)) {
+        if (childRun.status === "COMPLETED") {
+          return childRun.output as T;
+        }
+        if (FAILED_RUN_STATUSES.has(childRun.status)) {
+          const message =
+            (childRun as { error?: { message?: string } }).error?.message ??
+            "no output";
+          throw new Error(`${childRun.taskIdentifier} ${childRun.status}: ${message}`);
+        }
+        // Non-terminal status (QUEUED/EXECUTING/…) — keep listening.
       }
-      return result.output as T;
+      throw new Error(
+        `Child run ${handle.id} subscription closed before completion`,
+      );
     }
 
     if (node.type === "crop-image") {
@@ -172,17 +236,22 @@ export async function executeRun(runId: string, mode: ExecutorMode) {
     run.targetNodeIds,
   );
   const nodeRunIdByNode = new Map(run.nodeRuns.map((nr) => [nr.nodeId, nr.id]));
+  const progress = makeProgressPublisher(mode);
 
   await prisma.run.update({
     where: { id: runId },
     data: { status: "RUNNING", startedAt: new Date() },
   });
+  // Seed the Realtime metadata: everything in the run set starts "queued".
+  await progress.setStatus("RUNNING");
+  await progress.setMany([...runSet], "queued");
 
   const executor = mode === "trigger" ? triggerExecutor(runId) : localExecutor();
 
   try {
     const { results } = await runDag(graph, runSet, executor, {
       onNodeStart: async (nodeId) => {
+        await progress.setNode(nodeId, "running");
         const id = nodeRunIdByNode.get(nodeId);
         if (id)
           await prisma.nodeRun.update({
@@ -191,6 +260,7 @@ export async function executeRun(runId: string, mode: ExecutorMode) {
           });
       },
       onNodeFinish: async (res, durationMs) => {
+        await progress.setNode(res.nodeId, "completed");
         const id = nodeRunIdByNode.get(res.nodeId);
         if (id)
           await prisma.nodeRun.update({
@@ -207,6 +277,7 @@ export async function executeRun(runId: string, mode: ExecutorMode) {
           });
       },
       onNodeError: async (nodeId, error) => {
+        await progress.setNode(nodeId, "failed");
         const id = nodeRunIdByNode.get(nodeId);
         if (id)
           await prisma.nodeRun.update({
@@ -215,6 +286,8 @@ export async function executeRun(runId: string, mode: ExecutorMode) {
           });
       },
       onNodeSkipped: async (nodeId) => {
+        // Skipped nodes go neutral on the canvas (idle glow).
+        await progress.setNode(nodeId, "idle");
         const id = nodeRunIdByNode.get(nodeId);
         if (id)
           await prisma.nodeRun.update({
@@ -240,11 +313,13 @@ export async function executeRun(runId: string, mode: ExecutorMode) {
       where: { id: run.workflowId },
       data: { status: failed > 0 ? "FAILED" : "COMPLETED" },
     });
+    await progress.setStatus(failed > 0 ? "FAILED" : "COMPLETED");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await prisma.run.update({
       where: { id: runId },
       data: { status: "FAILED", finishedAt: new Date(), error: message },
     });
+    await progress.setStatus("FAILED");
   }
 }
